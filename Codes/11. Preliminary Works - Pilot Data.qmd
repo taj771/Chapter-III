@@ -1,0 +1,638 @@
+---
+title: "Preliminary Models - Pilot Survey Data"
+format: pdf
+editor: visual
+---
+
+#### 1. Model 1
+
+Basic Model With only Cost parameter
+
+```{r, echo= FALSE, warning=FALSE, message=FALSE, results="hide"}
+
+
+library(readr)
+library(dplyr)
+library(apollo)
+library(pacman)
+library(car)
+library(modelsummary)
+library(here)
+
+apollo_modeChoiceData <- read_csv(here("Deriveddata", "processed_pilotdata_1_Apollo.csv"))
+
+
+# Arrange data by RespondentID
+database <- apollo_modeChoiceData %>%
+  arrange(CaseId)
+
+database <- database %>%
+  filter(!is.na(VOTE))
+
+# Initialise Apollo
+apollo_initialise()
+
+# Set core controls
+apollo_control = list(
+  modelName       = "MNL_SP",
+  modelDescr      = "Simple MNL model on mode choice SP data",
+  indivID         = "CaseId",
+  outputDirectory = "output"
+)
+
+# Define model parameters
+apollo_beta = c(
+  b_asc     = 0,  # Intercept for policy
+  b_cost  = 0   # Coefficient for cost
+)
+
+# No parameters are fixed
+apollo_fixed = c()
+
+# Validate inputs
+apollo_inputs = apollo_validateInputs()
+
+# Define model and likelihood function
+apollo_probabilities = function(apollo_beta, apollo_inputs, functionality = "estimate") {
+  
+  # Attach inputs
+  apollo_attach(apollo_beta, apollo_inputs)
+  on.exit(apollo_detach(apollo_beta, apollo_inputs))
+  
+  # Create list of probabilities
+  P = list()
+  
+  # Define utilities
+  V = list()
+  V[["policy"]]  = b_asc + b_cost *COST  # Utility for choosing the policy
+  V[["opt_out"]] = 0  # Utility for opting out
+  
+  # Define MNL settings
+  mnl_settings = list(
+    alternatives  = c(policy = 1, opt_out = 0),  # Match to VOTE column coding
+    avail         = 1,  # Both alternatives are always available
+    choiceVar     = VOTE,  # Choice variable in the dataset
+    utilities     = V
+  )
+  
+  # Compute probabilities using MNL model
+  P[["model"]] = apollo_mnl(mnl_settings, functionality)
+  
+  # Take product across observations for the same individual
+  P = apollo_panelProd(P, apollo_inputs, functionality)
+  
+  # Prepare and return probabilities
+  P = apollo_prepareProb(P, apollo_inputs, functionality)
+  return(P)
+}
+
+# Estimate the model
+model = apollo_estimate(apollo_beta, apollo_fixed, apollo_probabilities, apollo_inputs)
+
+# Display model outputs
+#apollo_modelOutput(model)
+
+# Save model outputs
+# apollo_saveOutput(model)
+
+
+```
+
+```{r, echo= FALSE, warning=FALSE, message=FALSE}
+# Extract coefficient estimates
+coef_table <- data.frame(
+  #Term = names(model$estimate),
+  Estimate = model$estimate,
+  Std_Error = model$se,
+  t_value = model$estimate / model$se,
+  p_value = 2 * (1 - pnorm(abs(model$estimate / model$se)))
+)
+
+# Print neatly
+print(coef_table)
+
+
+```
+
+Willingness to pay estimation from the basic model
+
+```{r, echo= FALSE, warning=FALSE, message=FALSE}
+
+# Extract coefficients and covariance matrix
+coef_values <- model$estimate
+vcov_matrix <- model$robvarcov
+
+# Use deltaMethod with explicit inputs
+deltaMethod(
+  object = coef_values, 
+  vcov. = vcov_matrix, 
+  g = "-(b_asc)/(b_cost)"
+)
+
+
+```
+
+#### 2. Model 2
+
+Add the water quality parameter, without discriminating locality.
+
+```{r, echo= FALSE, warning=FALSE, message=FALSE, results="hide"}
+
+
+# Arrange data by RespondentID
+database <- apollo_modeChoiceData %>%
+  arrange(CaseId)
+
+database <- database %>%
+  filter(!is.na(VOTE))%>%
+  filter(!is.na(POLICY_AVERAGE))%>%
+  filter(!is.na(CURRENT_AVERAGE))
+
+
+
+# Initialise Apollo
+apollo_initialise()
+
+# Set core controls
+apollo_control = list(
+  modelName       = "MNL Model 2",
+  modelDescr      = "",
+  indivID         = "CaseId",
+  outputDirectory = "output"
+)
+
+# Define model parameters
+apollo_beta = c(
+  b_asc     = 0,  # Intercept for policy
+  b_cost  = 0,   # Coefficient for cost
+  b_wq =0
+)
+
+# No parameters are fixed
+apollo_fixed = c()
+
+# Validate inputs
+apollo_inputs = apollo_validateInputs()
+
+# Define model and likelihood function
+apollo_probabilities = function(apollo_beta, apollo_inputs, functionality = "estimate") {
+  
+  # Attach inputs
+  apollo_attach(apollo_beta, apollo_inputs)
+  on.exit(apollo_detach(apollo_beta, apollo_inputs))
+  
+  # Create list of probabilities
+  P = list()
+  
+  # Define utilities
+  V = list()
+  V[["policy"]]  = b_asc + b_cost *COST + b_wq*POLICY_AVERAGE 
+  V[["opt_out"]] = b_wq*CURRENT_AVERAGE  # Utility for opting out
+  
+  # Define MNL settings
+  mnl_settings = list(
+    alternatives  = c(policy = 1, opt_out = 0),  # Match to VOTE column coding
+    avail         = 1,  # Both alternatives are always available
+    choiceVar     = VOTE,  # Choice variable in the dataset
+    utilities     = V
+  )
+  
+  # Compute probabilities using MNL model
+  P[["model"]] = apollo_mnl(mnl_settings, functionality)
+  
+  # Take product across observations for the same individual
+  P = apollo_panelProd(P, apollo_inputs, functionality)
+  
+  # Prepare and return probabilities
+  P = apollo_prepareProb(P, apollo_inputs, functionality)
+  return(P)
+}
+
+# Estimate the model
+model = apollo_estimate(apollo_beta, apollo_fixed, apollo_probabilities, apollo_inputs)
+
+# Display model outputs
+apollo_modelOutput(model)
+
+# Save model outputs
+#apollo_saveOutput(model)
+
+```
+
+```{r, echo= FALSE, warning=FALSE, message=FALSE}
+
+# Extract coefficient estimates
+coef_table <- data.frame(
+  #Term = names(model$estimate),
+  Estimate = model$estimate,
+  Std_Error = model$se,
+  t_value = model$estimate / model$se,
+  p_value = 2 * (1 - pnorm(abs(model$estimate / model$se)))
+)
+
+# Print neatly
+print(coef_table)
+
+```
+
+#### 3. Model 3
+
+Here we use more diversified water quality parameters that are defined based on respondents locality. The definition of the variables as follows:
+
+-   b_wq_local = WQ score for the respondents local basin
+
+-   b_wq_nonlocal = WQ score for the respondents non-local basin
+
+```{r, echo= FALSE, warning=FALSE, message=FALSE, results="hide"}
+
+
+# Arrange data by RespondentID
+database <- apollo_modeChoiceData %>%
+  arrange(CaseId)
+
+
+database <- database %>%
+  filter(!is.na(VOTE))%>%
+  filter(!is.na(WQ_LOCAL_CURRENT))%>%
+  filter(!is.na(WQ_NL_CURRENT))%>%
+  filter(!is.na(WQ_LOCAL_POLICY))%>%
+  filter(!is.na(WQ_NL_POLICY))
+
+# Initialise Apollo
+apollo_initialise()
+
+# Set core controls
+apollo_control = list(
+  modelName       = "MNL Model 3",
+  modelDescr      = "",
+  indivID         = "CaseId",
+  outputDirectory = "output"
+)
+
+# Define model parameters
+apollo_beta = c(
+  b_asc     = 0,  
+  b_cost  = 0,  
+  b_wq_local =0,           # WQ change within local watershed
+  b_wq_nonlocal =0         # WQ change within non-local watershed
+  
+) 
+
+
+
+# No parameters are fixed
+apollo_fixed = c()
+
+# Validate inputs
+apollo_inputs = apollo_validateInputs()
+
+# Define model and likelihood function
+apollo_probabilities = function(apollo_beta, apollo_inputs, functionality = "estimate") {
+  
+  # Attach inputs
+  apollo_attach(apollo_beta, apollo_inputs)
+  on.exit(apollo_detach(apollo_beta, apollo_inputs))
+  
+  # Create list of probabilities
+  P = list()
+  
+  # Define utilities
+  V = list()
+  V[["policy"]]  = b_asc + b_cost *COST + 
+    #b_wq_home*WQ_HOME_POLICY +
+    b_wq_local*WQ_LOCAL_POLICY +
+    b_wq_nonlocal*WQ_NL_POLICY 
+  
+  
+  V[["opt_out"]] = 
+    b_wq_local*WQ_LOCAL_CURRENT +
+    b_wq_nonlocal*WQ_NL_CURRENT 
+
+  
+  
+  # Define MNL settings
+  mnl_settings = list(
+    alternatives  = c(policy = 1, opt_out = 0),  # Match to VOTE column coding
+    avail         = 1,  # Both alternatives are always available
+    choiceVar     = VOTE,  # Choice variable in the dataset
+    utilities     = V
+  )
+  
+  # Compute probabilities using MNL model
+  P[["model"]] = apollo_mnl(mnl_settings, functionality)
+  
+  # Take product across observations for the same individual
+  P = apollo_panelProd(P, apollo_inputs, functionality)
+  
+  # Prepare and return probabilities
+  P = apollo_prepareProb(P, apollo_inputs, functionality)
+  return(P)
+}
+
+# Estimate the model
+model = apollo_estimate(apollo_beta, apollo_fixed, apollo_probabilities, apollo_inputs)
+
+# Display model outputs
+apollo_modelOutput(model)
+
+
+# Save model outputs
+# apollo_saveOutput(model)
+
+```
+
+```{r, echo= FALSE, warning=FALSE, message=FALSE}
+# Extract coefficient estimates
+coef_table <- data.frame(
+  #Term = names(model$estimate),
+  Estimate = model$estimate,
+  Std_Error = model$se,
+  t_value = model$estimate / model$se,
+  p_value = 2 * (1 - pnorm(abs(model$estimate / model$se)))
+)
+
+# Print neatly
+print(coef_table)
+```
+
+The coeffiecent for b_wq_home and b_wq_local_sub_basin are not showing the expected sign.
+
+#### 4. Model 4
+
+Here we further divide based on whether WQ changes occurred at local basin, local sub basin, non-local basin and non-local sub basin. The definition of the variables as follows:
+
+-   b_wq_local_basin = WQ score for the respondents local basin; =0 if policy involves different spatial unit
+
+-   b_wq_nonlocal_basin = WQ score for the respondents non-local basin; =0 if policy involves different spatial unit
+
+-   b_wq_local_sub_basin = WQ score for the respondents local sub-basin; =0 if policy involves different spatial unit
+
+-   b_wq_nonlocal_sub_basin = WQ score for the respondents non-local subbasin; =0 if policy involves different spatial unit
+
+```{r, echo= FALSE, warning=FALSE, message=FALSE, results="hide"}
+
+
+# Arrange data by RespondentID
+database <- apollo_modeChoiceData %>%
+  arrange(CaseId)
+
+
+database <- database %>%
+  filter(!is.na(VOTE))%>%
+
+  filter(!is.na(WQ_SUBBASIN_LOCAL_CURRENT))%>%
+  filter(!is.na(WQ_SUBBASIN_NL_CURRENT))%>%
+  
+  filter(!is.na(WQ_SUBBASIN_LOCAL_POLICY))%>%
+  filter(!is.na(WQ_SUBBASIN_NL_POLICY))%>%
+  
+  filter(!is.na(WQ_BASIN_LOCAL_CURRENT))%>%
+  filter(!is.na(WQ_BASIN_NL_CURRENT))%>%
+  
+  filter(!is.na(WQ_BASIN_LOCAL_POLICY))%>%
+  filter(!is.na(WQ_BASIN_NL_POLICY))
+
+
+
+
+
+# Initialise Apollo
+apollo_initialise()
+
+# Set core controls
+apollo_control = list(
+  modelName       = "MNL_SP",
+  modelDescr      = "Simple MNL model on mode choice SP data",
+  indivID         = "CaseId",
+  outputDirectory = "output"
+)
+
+# Define model parameters
+apollo_beta = c(
+  b_asc     = 0, 
+  b_cost  = 0,   
+  b_wq_local_basin =0,           # WQ chnage in local basin
+  b_wq_nonlocal_basin =0,        # WQ chnage in non-local basin
+  b_wq_local_sub_basin = 0,      # WQ chnage in local sub basin
+  b_wq_nonlocal_sub_basin = 0.   # WQ chnage in non-local sub basin
+  
+) 
+
+
+
+# No parameters are fixed
+apollo_fixed = c()
+
+# Validate inputs
+apollo_inputs = apollo_validateInputs()
+
+# Define model and likelihood function
+apollo_probabilities = function(apollo_beta, apollo_inputs, functionality = "estimate") {
+  
+  # Attach inputs
+  apollo_attach(apollo_beta, apollo_inputs)
+  on.exit(apollo_detach(apollo_beta, apollo_inputs))
+  
+  # Create list of probabilities
+  P = list()
+  
+  # Define utilities
+  V = list()
+  V[["policy"]]  = b_asc + b_cost *COST + 
+    b_wq_local_basin*WQ_BASIN_LOCAL_POLICY +
+    b_wq_nonlocal_basin*WQ_BASIN_NL_POLICY +
+    b_wq_local_sub_basin*WQ_SUBBASIN_LOCAL_POLICY +
+    b_wq_nonlocal_sub_basin*WQ_SUBBASIN_NL_POLICY
+
+
+  V[["opt_out"]] = 
+    b_wq_local_basin*WQ_BASIN_LOCAL_CURRENT +
+    b_wq_nonlocal_basin*WQ_BASIN_NL_CURRENT 
+    b_wq_local_sub_basin*WQ_SUBBASIN_LOCAL_CURRENT+
+    b_wq_nonlocal_sub_basin*WQ_SUBBASIN_NL_CURRENT
+  
+  
+  
+  # Define MNL settings
+  mnl_settings = list(
+    alternatives  = c(policy = 1, opt_out = 0),  # Match to VOTE column coding
+    avail         = 1,  # Both alternatives are always available
+    choiceVar     = VOTE,  # Choice variable in the dataset
+    utilities     = V
+  )
+  
+  # Compute probabilities using MNL model
+  P[["model"]] = apollo_mnl(mnl_settings, functionality)
+  
+  # Take product across observations for the same individual
+  P = apollo_panelProd(P, apollo_inputs, functionality)
+  
+  # Prepare and return probabilities
+  P = apollo_prepareProb(P, apollo_inputs, functionality)
+  return(P)
+}
+
+# Estimate the model
+model = apollo_estimate(apollo_beta, apollo_fixed, apollo_probabilities, apollo_inputs)
+
+# Display model outputs
+apollo_modelOutput(model)
+
+```
+
+```{r, echo= FALSE, warning=FALSE, message=FALSE}
+# Extract coefficient estimates
+coef_table <- data.frame(
+  #Term = names(model$estimate),
+  Estimate = model$estimate,
+  Std_Error = model$se,
+  t_value = model$estimate / model$se,
+  p_value = 2 * (1 - pnorm(abs(model$estimate / model$se)))
+)
+
+# Print neatly
+print(coef_table)
+```
+
+#### 5. Model 5
+
+Add WQ within their home local sub basin
+
+-   b_wq_home = WQ score for sub-watershed where respondents lives; =0 for non-local voting scenario (if choice is made based on their local sub-basin or basin that include their local sub-basin then we use the WQ score for particular sub-basin)
+
+-   b_wq_local_basin = WQ score for the respondents local basin; =0 if policy involves different spatial unit
+
+-   b_wq_nonlocal_basin = WQ score for the respondents non-local basin; =0 if policy involves different spatial unit
+
+-   b_wq_local_sub_basin = WQ score for the respondents local sub-basin; =0 if policy involves different spatial unit
+
+-   b_wq_nonlocal_sub_basin = WQ score for the respondents non-local subbasin; =0 if policy involves different spatial unit
+
+```{r, echo= FALSE, warning=FALSE, message=FALSE, results="hide"}
+
+
+# Arrange data by RespondentID
+database <- apollo_modeChoiceData %>%
+  arrange(CaseId)
+
+
+database <- database %>%
+  filter(!is.na(VOTE))%>%
+  filter(!is.na(WQ_HOME_CURRENT))%>%
+  filter(!is.na(WQ_HOME_POLICY))%>%
+  
+  filter(!is.na(WQ_SUBBASIN_LOCAL_CURRENT))%>%
+  filter(!is.na(WQ_SUBBASIN_NL_CURRENT))%>%
+  
+  filter(!is.na(WQ_SUBBASIN_LOCAL_POLICY))%>%
+  filter(!is.na(WQ_SUBBASIN_NL_POLICY))%>%
+  
+  filter(!is.na(WQ_BASIN_LOCAL_CURRENT))%>%
+  filter(!is.na(WQ_BASIN_NL_CURRENT))%>%
+  
+  filter(!is.na(WQ_BASIN_LOCAL_POLICY))%>%
+  filter(!is.na(WQ_BASIN_NL_POLICY))
+
+
+
+
+
+# Initialise Apollo
+apollo_initialise()
+
+# Set core controls
+apollo_control = list(
+  modelName       = "MNL_SP",
+  modelDescr      = "Simple MNL model on mode choice SP data",
+  indivID         = "CaseId",
+  outputDirectory = "output"
+)
+
+# Define model parameters
+apollo_beta = c(
+  b_asc     = 0,  # Intercept for policy
+  b_cost  = 0,   # Coefficient for cost
+  b_wq_home = 0,
+  b_wq_local_basin =0,
+  b_wq_nonlocal_basin =0,
+  b_wq_local_sub_basin = 0,
+  b_wq_nonlocal_sub_basin = 0
+  
+) 
+
+
+
+# No parameters are fixed
+apollo_fixed = c()
+
+# Validate inputs
+apollo_inputs = apollo_validateInputs()
+
+# Define model and likelihood function
+apollo_probabilities = function(apollo_beta, apollo_inputs, functionality = "estimate") {
+  
+  # Attach inputs
+  apollo_attach(apollo_beta, apollo_inputs)
+  on.exit(apollo_detach(apollo_beta, apollo_inputs))
+  
+  # Create list of probabilities
+  P = list()
+  
+  # Define utilities
+  V = list()
+  V[["policy"]]  = b_asc + b_cost *COST + 
+    b_wq_home*WQ_HOME_POLICY +
+    b_wq_local_basin*WQ_BASIN_LOCAL_POLICY +
+    b_wq_nonlocal_basin*WQ_BASIN_NL_POLICY +
+    b_wq_local_sub_basin*WQ_SUBBASIN_LOCAL_POLICY +
+    b_wq_nonlocal_sub_basin*WQ_SUBBASIN_NL_POLICY
+  
+  
+  V[["opt_out"]] = 
+    b_wq_home*WQ_HOME_CURRENT
+    b_wq_local_basin*WQ_BASIN_LOCAL_CURRENT +
+    b_wq_nonlocal_basin*WQ_BASIN_NL_CURRENT 
+    b_wq_local_sub_basin*WQ_SUBBASIN_LOCAL_CURRENT +
+    b_wq_nonlocal_sub_basin*WQ_SUBBASIN_NL_CURRENT
+  
+  
+  
+  # Define MNL settings
+  mnl_settings = list(
+    alternatives  = c(policy = 1, opt_out = 0),  # Match to VOTE column coding
+    avail         = 1,  # Both alternatives are always available
+    choiceVar     = VOTE,  # Choice variable in the dataset
+    utilities     = V
+  )
+  
+  # Compute probabilities using MNL model
+  P[["model"]] = apollo_mnl(mnl_settings, functionality)
+  
+  # Take product across observations for the same individual
+  P = apollo_panelProd(P, apollo_inputs, functionality)
+  
+  # Prepare and return probabilities
+  P = apollo_prepareProb(P, apollo_inputs, functionality)
+  return(P)
+}
+
+# Estimate the model
+model = apollo_estimate(apollo_beta, apollo_fixed, apollo_probabilities, apollo_inputs)
+
+# Display model outputs
+apollo_modelOutput(model)
+```
+
+```{r, echo= FALSE, warning=FALSE, message=FALSE}
+# Extract coefficient estimates
+coef_table <- data.frame(
+  #Term = names(model$estimate),
+  Estimate = model$estimate,
+  Std_Error = model$se,
+  t_value = model$estimate / model$se,
+  p_value = 2 * (1 - pnorm(abs(model$estimate / model$se)))
+)
+
+# Print neatly
+print(coef_table)
+```
