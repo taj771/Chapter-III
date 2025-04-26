@@ -1,6 +1,7 @@
 ########################################################################################
-# Description: MNL Model 1
+# Description: RPM Model 4
 #######################################################################################
+
 
 ### Clear memory
 rm(list = ls())
@@ -16,7 +17,7 @@ apollo_initialise()
 
 ### Set core controls
 apollo_control = list(
-  modelDescr      = "RPM Model 1",
+  modelDescr      = "Mixed-MNL",
   indivID         = "CaseId",  
   nCores          = 4,
   outputDirectory = "output"
@@ -34,9 +35,28 @@ database <- database %>%
 
 database <- database %>%
   filter(!is.na(VOTE))%>%
-  filter(!is.na(POLICY_AVERAGE))%>%
-  filter(!is.na(CURRENT_AVERAGE))
+  
+  filter(!is.na(WQ_SUBBASIN_LOCAL_CURRENT))%>%
+  filter(!is.na(WQ_SUBBASIN_NL_CURRENT))%>%
+  
+  filter(!is.na(WQ_SUBBASIN_LOCAL_POLICY))%>%
+  filter(!is.na(WQ_SUBBASIN_NL_POLICY))%>%
+  
+  filter(!is.na(WQ_BASIN_LOCAL_CURRENT))%>%
+  filter(!is.na(WQ_BASIN_NL_CURRENT))%>%
+  
+  filter(!is.na(WQ_BASIN_LOCAL_POLICY))%>%
+  filter(!is.na(WQ_BASIN_NL_POLICY))
 
+
+##############################################################################
+# Remove respondents say "Yes" to all the choices they got
+##############################################################################
+
+database <- database%>%
+  group_by(CaseId) %>%
+  filter(!all(VOTE == 1)) %>%
+  ungroup()
 
 # ################################################################# #
 #### DEFINE MODEL PARAMETERS                                     ####
@@ -45,7 +65,17 @@ database <- database %>%
 apollo_beta = c(
   mu_b_asc     = 0,  
   sigma_b_asc = 0.01,
-  b_cost  = 0
+  b_cost  = 0,   
+  mu_b_wq_local_basin = 0,
+  sigma_b_wq_local_basin = 0.01,
+  mu_b_wq_nonlocal_basin = 0,
+  sigma_b_wq_nonlocal_basin = 0.01,
+  mu_b_wq_local_sub_basin = 0,
+  sigma_b_wq_local_sub_basin = 0.01,
+  mu_b_wq_nonlocal_sub_basin = 0,
+  sigma_b_wq_nonlocal_sub_basin = 0.01
+  
+  
 )
 
 ### Vector with names (in quotes) of parameters to be kept fixed at their starting value in apollo_beta, use apollo_beta_fixed = c() if none
@@ -61,7 +91,7 @@ apollo_draws = list(
   interDrawsType = "halton",
   interNDraws    = 1000,
   interUnifDraws = c(),
-  interNormDraws = c("draws_asc","draws_wq"),
+  interNormDraws = c("draws_asc","draws_wq_local_basin","draws_wq_nonlocal_basin","draws_wq_local_sub_basin","draws_wq_nonlocal_sub_basin"),
   intraDrawsType = "halton",
   intraNDraws    = 0,
   intraUnifDraws = c(),
@@ -74,7 +104,11 @@ apollo_randCoeff = function(apollo_beta, apollo_inputs){
   randcoeff = list()
   
   randcoeff[["b_asc"]] = mu_b_asc + sigma_b_asc*draws_asc 
-
+  randcoeff[["b_wq_local_basin"]] =  mu_b_wq_local_basin + sigma_b_wq_local_basin*draws_wq_local_basin
+  randcoeff[["b_wq_nonlocal_basin"]] =  mu_b_wq_nonlocal_basin + sigma_b_wq_nonlocal_basin*draws_wq_nonlocal_basin
+  
+  randcoeff[["b_wq_local_sub_basin"]] =  mu_b_wq_local_sub_basin + sigma_b_wq_local_sub_basin*draws_wq_local_sub_basin
+  randcoeff[["b_wq_nonlocal_sub_basin"]] =  mu_b_wq_nonlocal_sub_basin + sigma_b_wq_nonlocal_sub_basin*draws_wq_nonlocal_sub_basin
   
   return(randcoeff)
 }
@@ -98,8 +132,19 @@ apollo_probabilities = function(apollo_beta, apollo_inputs, functionality = "est
   
   # Define utilities
   V = list()
-  V[["policy"]]  = b_asc + b_cost *COST  # Utility for choosing the policy
-  V[["opt_out"]] = 0  # Utility for opting out
+  V[["policy"]]  = b_asc + b_cost *COST + 
+    b_wq_local_basin*WQ_BASIN_LOCAL_POLICY +
+    b_wq_nonlocal_basin*WQ_BASIN_NL_POLICY +
+    b_wq_local_sub_basin*WQ_SUBBASIN_LOCAL_POLICY +
+    b_wq_nonlocal_sub_basin*WQ_SUBBASIN_NL_POLICY
+  
+  
+  V[["opt_out"]] = 
+    b_wq_local_basin*WQ_BASIN_LOCAL_CURRENT +
+    b_wq_nonlocal_basin*WQ_BASIN_NL_CURRENT 
+  b_wq_local_sub_basin*WQ_SUBBASIN_LOCAL_CURRENT+
+    b_wq_nonlocal_sub_basin*WQ_SUBBASIN_NL_CURRENT
+  
   
   # Define MNL settings
   mnl_settings = list(
@@ -133,23 +178,3 @@ model = apollo_estimate(apollo_beta, apollo_fixed,apollo_probabilities, apollo_i
 
 # Display model outputs
 apollo_modelOutput(model)
-
-
-###############################################################################
-#Willingness To Pay 
-###############################################################################
-
-
-
-# Extract coefficients and covariance matrix
-coef_values <- model$estimate
-vcov_matrix <- model$robvarcov
-
-# Use deltaMethod with explicit inputs
-deltaMethod(
-  object = coef_values, 
-  vcov. = vcov_matrix, 
-  g = "-(mu_b_asc)/(b_cost)"
-)
-
-

@@ -7,7 +7,7 @@ library(apollo)
 
 # Load dataset
 library(haven)
-apollo_modeChoiceData <- read_dta("~/Library/CloudStorage/OneDrive-UniversityofSaskatchewan/Chapter III-UseNonUseValue/R/Vossler/BCG survey replication data.dta")
+apollo_modeChoiceData <- read_dta("~/Library/CloudStorage/OneDrive-UniversityofSaskatchewan/Chapter III-UseNonUseValue/Other/Vossler/BCG survey replication data.dta")
 
 
 

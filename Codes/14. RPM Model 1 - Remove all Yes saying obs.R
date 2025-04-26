@@ -38,6 +38,15 @@ database <- database %>%
   filter(!is.na(CURRENT_AVERAGE))
 
 
+##############################################################################
+# Remove respondents say "Yes" to all the choices they got
+
+database <- database%>%
+  group_by(CaseId) %>%
+  filter(!all(VOTE == 1)) %>%
+  ungroup()
+
+
 # ################################################################# #
 #### DEFINE MODEL PARAMETERS                                     ####
 # ################################################################# #
@@ -74,7 +83,7 @@ apollo_randCoeff = function(apollo_beta, apollo_inputs){
   randcoeff = list()
   
   randcoeff[["b_asc"]] = mu_b_asc + sigma_b_asc*draws_asc 
-
+  
   
   return(randcoeff)
 }
@@ -134,7 +143,6 @@ model = apollo_estimate(apollo_beta, apollo_fixed,apollo_probabilities, apollo_i
 # Display model outputs
 apollo_modelOutput(model)
 
-
 ###############################################################################
 #Willingness To Pay 
 ###############################################################################
@@ -149,7 +157,5 @@ vcov_matrix <- model$robvarcov
 deltaMethod(
   object = coef_values, 
   vcov. = vcov_matrix, 
-  g = "-(mu_b_asc)/(b_cost)"
+  g = "-( mu_b_asc)/(b_cost)"
 )
-
-

@@ -1,7 +1,6 @@
 ########################################################################################
-# Description: MNL Model 4
-# WQ parameters further seperate into local basin changes, local sub basin changes, 
-# non-local basin changes and non-local sub basin chnages
+# Description: Calculation of WTP of increasing WQ level up to level 2 (based on current level)
+# MNL Model 4
 #######################################################################################
 
 # Clean the memory
@@ -121,72 +120,18 @@ apollo_modelOutput(model)
 coef_values <- model$estimate
 vcov_matrix <- model$robvarcov
 
-# Use deltaMethod with explicit inputs
-deltaMethod(
-  object = coef_values, 
-  vcov. = vcov_matrix, 
-  g = "-(b_asc)/(b_cost)"
-)
 
-deltaMethod(
-  object = coef_values, 
-  vcov. = vcov_matrix, 
-  g = "-((b_asc + b_wq_local_basin))/b_cost"
-)
+# Calculation of WTP for increasing WQ level upto 2 at non-local subbasin scale
+
+# filter choices of non-local - subbasin level
+# then calculate WTP for each individual separately based on their current WQ level
+
+df1 <- database%>%
+  filter(CHOICE_AREA == "SUBBASIN" & CHOICE_LOCALITY_SUBBASIN == "NONLOCAL")%>%
+  select(CaseId,CHOICE_AREA,CHOICE_LOCALITY_SUBBASIN,WQ_SUBBASIN_NL_CURRENT)
 
 
-# one level improvment 
- # Expression: -((b_asc + b_wq_local_basin*(WQ_BASIN_LOCAL_CURRENT-1)) - (b_wq_local_basin*WQ_BASIN_LOCAL_CURRENT))/b_cost
-
-
-deltaMethod(
-  object = coef_values, 
-  vcov. = vcov_matrix, 
-  g = "-(b_asc + b_wq_local_basin*(-1))/b_cost"
-)
-
-deltaMethod(
-  object = coef_values, 
-  vcov. = vcov_matrix, 
-  g = "-(b_asc + b_wq_nonlocal_basin*(-1))/b_cost"
-)
-
-
-deltaMethod(
-  object = coef_values, 
-  vcov. = vcov_matrix, 
-  g = "-(b_asc + b_wq_local_sub_basin*(-1))/b_cost"
-)
-
-
-
-deltaMethod(
-  object = coef_values, 
-  vcov. = vcov_matrix, 
-  g = "-(b_asc + b_wq_nonlocal_sub_basin*(-1))/b_cost"
-)
-
-
-t <- database%>%
-  filter(CHOICE_AREA == "SUBBASIN" & CHOICE_LOCALITY_SUBBASIN == "NONLOCAL")
-
-
-t <- t %>%
-  mutate(delta_result = map(WQ_SUBBASIN_NL_CURRENT, function(wq) {
-    g_expr <- paste0("-((b_asc + b_wq_nonlocal_sub_basin*(", wq, "-1)) - (b_wq_nonlocal_sub_basin*", wq, "))/b_cost")
-    deltaMethod(object = coef_values, vcov. = vcov_matrix, g = g_expr)
-  })) %>%
-  mutate(estimate = map_dbl(delta_result, ~ .x$Estimate),
-         se       = map_dbl(delta_result, ~ .x$SE),
-         `2.5%`   = map_dbl(delta_result, ~ .x$`2.5 %`),
-         `97.5%`  = map_dbl(delta_result, ~ .x$`97.5 %`))
-
-
-t <- database%>%
-  filter(CHOICE_AREA == "SUBBASIN" & CHOICE_LOCALITY_SUBBASIN == "NONLOCAL")
-
-
-t1 <- t %>%
+df1 <- df1 %>%
   mutate(delta_result = map(WQ_SUBBASIN_NL_CURRENT, function(wq) {
     g_expr <- "-((b_asc + b_wq_nonlocal_sub_basin*2 - (b_wq_nonlocal_sub_basin*wq))/b_cost)"
     deltaMethod(object = coef_values, vcov. = vcov_matrix, g = g_expr)
@@ -197,15 +142,24 @@ t1 <- t %>%
          `97.5%`  = map_dbl(delta_result, ~ .x$`97.5 %`))
 
 
-mean(t1$estimate)
+
+mean(df1$estimate)
 
 
-t <- database%>%
-  filter(CHOICE_AREA == "SUBBASIN" & CHOICE_LOCALITY_SUBBASIN == "LOCAL")
+
+# Calculation of WTP for increasing WQ level upto 2 at local sub-basin scale
+# filter choices of local - sub-basin level
+# then calculate WTP for each individual separately based on their current WQ level
 
 
-t2 <- t %>%
-  mutate(delta_result = map(WQ_BASIN_NL_CURRENT, function(wq) {
+df2 <- database%>%
+  filter(CHOICE_AREA == "SUBBASIN" & CHOICE_LOCALITY_SUBBASIN == "LOCAL")%>%
+  select(CaseId,CHOICE_AREA,CHOICE_LOCALITY_SUBBASIN,WQ_SUBBASIN_LOCAL_CURRENT)
+
+
+
+df2 <- df2 %>%
+  mutate(delta_result = map(WQ_SUBBASIN_LOCAL_CURRENT, function(wq) {
     g_expr <- "-((b_asc + b_wq_local_sub_basin*2 - (b_wq_local_sub_basin*wq))/b_cost)"
     deltaMethod(object = coef_values, vcov. = vcov_matrix, g = g_expr)
   })) %>%
@@ -214,15 +168,18 @@ t2 <- t %>%
          `2.5%`   = map_dbl(delta_result, ~ .x$`2.5 %`),
          `97.5%`  = map_dbl(delta_result, ~ .x$`97.5 %`))
 
+mean(df2$estimate)
 
-mean(t2$estimate)
+# Calculation of WTP for increasing WQ level upto 2 at non-local basin scale
+# filter choices of non-local - basin level
+# then calculate WTP for each individual separately based on their current WQ level
 
 
-t <- database%>%
+df3 <- database%>%
   filter(CHOICE_AREA == "BASIN" & CHOICE_LOCALITY_SUBBASIN == "NONLOCAL")
 
 
-t1 <- t %>%
+df3 <- df3 %>%
   mutate(delta_result = map(WQ_BASIN_NL_CURRENT, function(wq) {
     g_expr <- "-((b_asc + b_wq_nonlocal_basin*2 - (b_wq_nonlocal_basin*wq))/b_cost)"
     deltaMethod(object = coef_values, vcov. = vcov_matrix, g = g_expr)
@@ -233,13 +190,19 @@ t1 <- t %>%
          `97.5%`  = map_dbl(delta_result, ~ .x$`97.5 %`))
 
 
-mean(t1$estimate)
+mean(df3$estimate)
 
-t <- database%>%
+# Calculation of WTP for increasing WQ level upto 2 at local basin scale
+# filter choices of local - basin level
+# then calculate WTP for each individual separately based on their current WQ level
+
+
+
+df4 <- database%>%
   filter(CHOICE_AREA == "BASIN" & CHOICE_LOCALITY_BASIN == "LOCAL")
 
 
-t2 <- t %>%
+df4 <- df4 %>%
   mutate(delta_result = map(WQ_BASIN_LOCAL_CURRENT, function(wq) {
     g_expr <- "-((b_asc + b_wq_local_basin*2 - (b_wq_local_basin*wq))/b_cost)"
     deltaMethod(object = coef_values, vcov. = vcov_matrix, g = g_expr)
@@ -250,6 +213,6 @@ t2 <- t %>%
          `97.5%`  = map_dbl(delta_result, ~ .x$`97.5 %`))
 
 
-mean(t2$estimate)
+mean(df4$estimate)
 
 
