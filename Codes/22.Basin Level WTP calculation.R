@@ -121,136 +121,113 @@ apollo_modelOutput(model)
 coef_values <- model$estimate
 vcov_matrix <- model$robvarcov
 
-# Use deltaMethod with explicit inputs
+
+
+# Qu'Appelle basin -  if it is local basin
 deltaMethod(
   object = coef_values, 
   vcov. = vcov_matrix, 
-  g = "-(b_asc)/(b_cost)"
+  g = "-((b_asc + b_wq_local_basin*2 - (b_wq_local_basin*3))/b_cost)"
 )
 
+# Qu'Appelle basin -  if it is nonlocal basin
 deltaMethod(
   object = coef_values, 
   vcov. = vcov_matrix, 
-  g = "-((b_asc + b_wq_local_basin))/b_cost"
+  g = "-((b_asc + b_wq_nonlocal_basin*2 - (b_wq_nonlocal_basin*3))/b_cost)"
 )
 
-
-# one level improvment 
- # Expression: -((b_asc + b_wq_local_basin*(WQ_BASIN_LOCAL_CURRENT-1)) - (b_wq_local_basin*WQ_BASIN_LOCAL_CURRENT))/b_cost
-
-
+# Assiniboine basin -  if it is local basin
 deltaMethod(
   object = coef_values, 
   vcov. = vcov_matrix, 
-  g = "-(b_asc + b_wq_local_basin*(-1))/b_cost"
+  g = "-((b_asc + b_wq_local_basin*2 - (b_wq_local_basin*3))/b_cost)"
 )
 
+# Assiniboine basin -  if it is nonlocal basin
 deltaMethod(
   object = coef_values, 
   vcov. = vcov_matrix, 
-  g = "-(b_asc + b_wq_nonlocal_basin*(-1))/b_cost"
+  g = "-((b_asc + b_wq_nonlocal_basin*2 - (b_wq_nonlocal_basin*3))/b_cost)"
 )
 
 
+# Souris basin -  if it is local basin
 deltaMethod(
   object = coef_values, 
   vcov. = vcov_matrix, 
-  g = "-(b_asc + b_wq_local_sub_basin*(-1))/b_cost"
+  g = "-((b_asc + b_wq_local_basin*2 - (b_wq_local_basin*3))/b_cost)"
 )
 
-
-
+# Souris basin -  if it is nonlocal basin
 deltaMethod(
   object = coef_values, 
   vcov. = vcov_matrix, 
-  g = "-(b_asc + b_wq_nonlocal_sub_basin*(-1))/b_cost"
+  g = "-((b_asc + b_wq_nonlocal_basin*2 - (b_wq_nonlocal_basin*3))/b_cost)"
+)
+
+# Red basin -  if it is local basin
+deltaMethod(
+  object = coef_values, 
+  vcov. = vcov_matrix, 
+  g = "-((b_asc + b_wq_local_basin*2 - (b_wq_local_basin*3))/b_cost)"
+)
+
+# Red basin -  if it is nonlocal basin
+deltaMethod(
+  object = coef_values, 
+  vcov. = vcov_matrix, 
+  g = "-((b_asc + b_wq_nonlocal_basin*2 - (b_wq_nonlocal_basin*3))/b_cost)"
+)
+
+# Grass and Burntwood basin -  if it is local basin
+deltaMethod(
+  object = coef_values, 
+  vcov. = vcov_matrix, 
+  g = "-((b_asc + b_wq_local_basin*2 - (b_wq_local_basin*5))/b_cost)"
+)
+
+# Grass and Burntwood basin -  if it is nonlocal basin
+deltaMethod(
+  object = coef_values, 
+  vcov. = vcov_matrix, 
+  g = "-((b_asc + b_wq_nonlocal_basin*2 - (b_wq_nonlocal_basin*5))/b_cost)"
 )
 
 
-t <- database%>%
-  filter(CHOICE_AREA == "SUBBASIN" & CHOICE_LOCALITY_SUBBASIN == "NONLOCAL")
+# Nelson  basin -  if it is local basin
+deltaMethod(
+  object = coef_values, 
+  vcov. = vcov_matrix, 
+  g = "-((b_asc + b_wq_local_basin*2 - (b_wq_local_basin*4))/b_cost)"
+)
+
+# Nelson  basin -  if it is nonlocal basin
+deltaMethod(
+  object = coef_values, 
+  vcov. = vcov_matrix, 
+  g = "-((b_asc + b_wq_nonlocal_basin*2 - (b_wq_nonlocal_basin*4))/b_cost)"
+)
 
 
-t <- t %>%
-  mutate(delta_result = map(WQ_SUBBASIN_NL_CURRENT, function(wq) {
-    g_expr <- paste0("-((b_asc + b_wq_nonlocal_sub_basin*(", wq, "-1)) - (b_wq_nonlocal_sub_basin*", wq, "))/b_cost")
-    deltaMethod(object = coef_values, vcov. = vcov_matrix, g = g_expr)
-  })) %>%
-  mutate(estimate = map_dbl(delta_result, ~ .x$Estimate),
-         se       = map_dbl(delta_result, ~ .x$SE),
-         `2.5%`   = map_dbl(delta_result, ~ .x$`2.5 %`),
-         `97.5%`  = map_dbl(delta_result, ~ .x$`97.5 %`))
-
-mean(t$estimate)
-
-t <- database%>%
-  filter(CHOICE_AREA == "SUBBASIN" & CHOICE_LOCALITY_SUBBASIN == "NONLOCAL")
 
 
-t1 <- t %>%
-  mutate(delta_result = map(WQ_SUBBASIN_NL_CURRENT, function(wq) {
-    g_expr <- "-((b_asc + b_wq_nonlocal_sub_basin*2 - (b_wq_nonlocal_sub_basin*wq))/b_cost)"
-    deltaMethod(object = coef_values, vcov. = vcov_matrix, g = g_expr)
-  })) %>%
-  mutate(estimate = map_dbl(delta_result, ~ .x$Estimate),
-         se       = map_dbl(delta_result, ~ .x$SE),
-         `2.5%`   = map_dbl(delta_result, ~ .x$`2.5 %`),
-         `97.5%`  = map_dbl(delta_result, ~ .x$`97.5 %`))
 
 
-mean(t1$estimate)
 
+# Battle basin -  if it is local basin
+deltaMethod(
+  object = coef_values, 
+  vcov. = vcov_matrix, 
+  g = "-((b_asc + b_wq_local_basin*2 - (b_wq_local_basin*5))/b_cost)"
+)
 
-t <- database%>%
-  filter(CHOICE_AREA == "SUBBASIN" & CHOICE_LOCALITY_SUBBASIN == "LOCAL")
+# Battle basin -  if it is nonlocal basin
+deltaMethod(
+  object = coef_values, 
+  vcov. = vcov_matrix, 
+  g = "-((b_asc + b_wq_nonlocal_basin*2 - (b_wq_nonlocal_basin*5))/b_cost)"
+)
 
-
-t2 <- t %>%
-  mutate(delta_result = map(WQ_BASIN_NL_CURRENT, function(wq) {
-    g_expr <- "-((b_asc + b_wq_local_sub_basin*2 - (b_wq_local_sub_basin*wq))/b_cost)"
-    deltaMethod(object = coef_values, vcov. = vcov_matrix, g = g_expr)
-  })) %>%
-  mutate(estimate = map_dbl(delta_result, ~ .x$Estimate),
-         se       = map_dbl(delta_result, ~ .x$SE),
-         `2.5%`   = map_dbl(delta_result, ~ .x$`2.5 %`),
-         `97.5%`  = map_dbl(delta_result, ~ .x$`97.5 %`))
-
-
-mean(t2$estimate)
-
-
-t <- database%>%
-  filter(CHOICE_AREA == "BASIN" & CHOICE_LOCALITY_SUBBASIN == "NONLOCAL")
-
-
-t1 <- t %>%
-  mutate(delta_result = map(WQ_BASIN_NL_CURRENT, function(wq) {
-    g_expr <- "-((b_asc + b_wq_nonlocal_basin*2 - (b_wq_nonlocal_basin*wq))/b_cost)"
-    deltaMethod(object = coef_values, vcov. = vcov_matrix, g = g_expr)
-  })) %>%
-  mutate(estimate = map_dbl(delta_result, ~ .x$Estimate),
-         se       = map_dbl(delta_result, ~ .x$SE),
-         `2.5%`   = map_dbl(delta_result, ~ .x$`2.5 %`),
-         `97.5%`  = map_dbl(delta_result, ~ .x$`97.5 %`))
-
-
-mean(t1$estimate)
-
-t <- database%>%
-  filter(CHOICE_AREA == "BASIN" & CHOICE_LOCALITY_BASIN == "LOCAL")
-
-
-t2 <- t %>%
-  mutate(delta_result = map(WQ_BASIN_LOCAL_CURRENT, function(wq) {
-    g_expr <- "-((b_asc + b_wq_local_basin*2 - (b_wq_local_basin*wq))/b_cost)"
-    deltaMethod(object = coef_values, vcov. = vcov_matrix, g = g_expr)
-  })) %>%
-  mutate(estimate = map_dbl(delta_result, ~ .x$Estimate),
-         se       = map_dbl(delta_result, ~ .x$SE),
-         `2.5%`   = map_dbl(delta_result, ~ .x$`2.5 %`),
-         `97.5%`  = map_dbl(delta_result, ~ .x$`97.5 %`))
-
-
-mean(t2$estimate)
 
 
