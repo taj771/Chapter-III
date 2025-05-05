@@ -542,18 +542,167 @@ df_final <- df_all%>%
   
 
 
+################################################################################
+# To address the distance decaying effects, we add few more variables based on the
+# provinces and whether sub basins are share across the province
+
+
+# Read shapefiles
+river_basins <- st_read("/Users/tharakajayalath/Library/CloudStorage/OneDrive-UniversityofSaskatchewan/Chapter III-UseNonUseValue/Survey/Shapefile/study_area.shp")%>%
+  mutate(sub_basin = case_when(
+    WSCSDA_E == "Qu'Appelle" ~ "Qu'Appelle", 
+    WSCSDA_E == "Assiniboine" ~ "Assiniboine", 
+    WSCSDA_E == "Souris" ~ "Souris", 
+    WSCSDA_E == "Red" ~ "Red", 
+    
+    WSCSDA_E == "Grass and Burntwood River Basin" ~ "Grass and Burntwood", 
+    WSCSDA_E == "Nelson River Basin" ~ "Nelson", 
+    WSCSDA_E == "Saskatchewan River Basin" ~ "Saskatchewan", 
+    WSCSDA_E == "Eastern Lake Winnipeg River Basin" ~ "Eastern Lake Winnipeg", 
+    WSCSDA_E == "Lake Winnipegosis and Lake Manitoba River Basin" ~ "Lake Winnipegosis and Lake Manitoba", 
+    WSCSDA_E == "Western Lake Winnipeg River Basin" ~ "Western Lake Winnipeg", 
+    
+    WSCSDA_E == "Central North Saskatchewan Sub River Basin" ~ "Central North Saskatchewan", 
+    WSCSDA_E == "Upper North Saskatchewan Sub River Basin" ~ "Upper North Saskatchewan", 
+    WSCSDA_E == "Battle Sub River Basin" ~ "Battle", 
+    WSCSDA_E == "Lower North Saskatchewan Sub River Basin" ~ "Lower North Saskatchewan", 
+    
+    WSCSDA_E == "Bow Sub River Basin" ~ "Bow", 
+    WSCSDA_E == "Red Deer Sub River Basin" ~ "Red Deer", 
+    WSCSDA_E == "Lower South Saskatchewan Sub River Basin" ~ "Lower South Saskatchewan", 
+    WSCSDA_E == "Upper South Saskatchewan Sub River Basin" ~ "Upper South Saskatchewan", 
+    
+    TRUE ~ NA_character_  # Otherwise, assign 0
+  ))
+ab <- st_read("/Users/tharakajayalath/Library/CloudStorage/OneDrive-UniversityofSaskatchewan/Chapter III-UseNonUseValue/Survey/Shapefile/AB.shp")
+mb <- st_read("/Users/tharakajayalath/Library/CloudStorage/OneDrive-UniversityofSaskatchewan/Chapter III-UseNonUseValue/Survey/Shapefile/MB.shp")
+sk <- st_read("/Users/tharakajayalath/Library/CloudStorage/OneDrive-UniversityofSaskatchewan/Chapter III-UseNonUseValue/Survey/Shapefile/SK.shp")
+
+# Combine all states into one object
+prov<- rbind(ab, mb, sk)
+
+# Make geometries valid
+river_basins <- st_make_valid(river_basins)
+prov <- st_make_valid(prov)
+
+prov <- st_transform(prov, st_crs(river_basins))
+
+# Perform spatial intersection
+intersections <- st_intersection(river_basins, prov)
+
+# Calculate area in km²
+intersections <- intersections %>%
+  mutate(area_km2 = as.numeric(st_area(.)) / 1e6)
+
+# Summarize: area of each river basin within each state
+summary_df <- intersections %>%
+  st_drop_geometry() %>%
+  group_by(sub_basin, PRNAME) %>%
+  summarize(area_km2 = sum(area_km2), .groups = "drop")
+
+# OPTIONAL: Spread into wide format (one row per basin, with area in each state)
+df <- tidyr::pivot_wider(summary_df,
+                         names_from = PRNAME,
+                         values_from = area_km2,
+                         values_fill = 0)%>%
+  mutate(CHOICE_SUB_BASIN = case_when(
+    sub_basin == "all" ~ 0,
+    sub_basin == "Assiniboine" ~ 1,
+    sub_basin == "Qu'Appelle" ~ 2,
+    sub_basin == "Red" ~ 3,
+    sub_basin == "Souris" ~ 4,
+    sub_basin == "Eastern Lake Winnipeg" ~ 5,
+    sub_basin == "Grass and Burntwood" ~ 6,
+    sub_basin == "Lake Winnipegosis and Lake Manitoba" ~ 7,
+    sub_basin == "Nelson" ~ 8,
+    sub_basin == "Saskatchewan" ~ 9,
+    sub_basin == "Western Lake Winnipeg" ~ 10,
+    sub_basin == "Battle" ~ 11,
+    sub_basin == "Central North Saskatchewan" ~ 12,
+    sub_basin == "Lower North Saskatchewan" ~ 13,
+    sub_basin == "Upper North Saskatchewan" ~ 14,
+    sub_basin == "Bow" ~ 15,
+    sub_basin == "Lower South Saskatchewan" ~ 16,
+    sub_basin == "Red Deer"~ 17,
+    sub_basin == "Upper South Saskatchewan"~ 18,
+    TRUE ~ NA_real_
+  ))%>%
+  select(sub_basin,CHOICE_SUB_BASIN,Manitoba,Saskatchewan,Alberta)
+
+# calculate area % withineach province
+df<- df%>%
+  rowwise() %>%
+  mutate(
+    total_area = sum(c_across(c(Manitoba, Saskatchewan, Alberta))),
+    PERC_MB = ceiling(10000 * Manitoba / total_area) / 100,
+    PERC_SK = ceiling(10000 * Saskatchewan / total_area) / 100,
+    PERC_AB = ceiling(10000 * Alberta / total_area) / 100
+  ) %>%
+  ungroup()%>%
+  rowwise() %>%
+  mutate(SHARED_BOADER = ifelse(sum(c_across(c(PERC_MB, PERC_SK, PERC_AB)) > 0) > 1,
+                                0, 1)) %>%
+  ungroup()%>%
+  select(sub_basin,CHOICE_SUB_BASIN,SHARED_BOADER,PERC_MB,PERC_SK,PERC_AB)
+
+df_final <- df_final%>%
+  left_join(df)%>%
+  mutate(WQ_SUBBASIN_LOCAL_NSB_CURRENT =  if_else(CHOICE_AREA == "SUBBASIN" & CHOICE_LOCALITY_SUBBASIN == "LOCAL" & 
+                                                    SHARED_BOADER == 1 ,CURRENT_AVERAGE,0))%>%
+  mutate(WQ_SUBBASIN_LOCAL_SB_CURRENT =  if_else(CHOICE_AREA == "SUBBASIN" & CHOICE_LOCALITY_SUBBASIN == "LOCAL" & 
+                                                   SHARED_BOADER == 0 ,CURRENT_AVERAGE,0))%>%
+  mutate(WQ_SUBBASIN_LOCAL_NSB_POLICY =  if_else(CHOICE_AREA == "SUBBASIN" & CHOICE_LOCALITY_SUBBASIN == "LOCAL" & 
+                                                   SHARED_BOADER == 1 ,POLICY_AVERAGE,0))%>%
+  mutate(WQ_SUBBASIN_LOCAL_SB_POLICY =  if_else(CHOICE_AREA == "SUBBASIN" & CHOICE_LOCALITY_SUBBASIN == "LOCAL" & 
+                                                  SHARED_BOADER == 0 ,POLICY_AVERAGE,0))%>%
+  
+  mutate(WQ_SUBBASIN_NL_NSB_LP_CURRENT = if_else(CHOICE_AREA == "SUBBASIN" &  CHOICE_LOCALITY_SUBBASIN == "NONLOCAL" & SHARED_BOADER == 1 & 
+                                                   ((PROVINCE == 1 & PERC_AB > 0) | (PROVINCE == 3 & PERC_MB > 0) | (PROVINCE == 12 & PERC_SK > 0)),
+                                                 CURRENT_AVERAGE,0 ))%>%
+  mutate(WQ_SUBBASIN_NL_SB_LP_CURRENT = if_else(CHOICE_AREA == "SUBBASIN" &  CHOICE_LOCALITY_SUBBASIN == "NONLOCAL" & SHARED_BOADER == 0 & 
+                                                  ((PROVINCE == 1 & PERC_AB > 0) | (PROVINCE == 3 & PERC_MB > 0) | (PROVINCE == 12 & PERC_SK > 0)),
+                                                CURRENT_AVERAGE,0 ))%>%
+  
+  mutate(WQ_SUBBASIN_NL_NSB_LP_POLICY = if_else(CHOICE_AREA == "SUBBASIN" &  CHOICE_LOCALITY_SUBBASIN == "NONLOCAL" & SHARED_BOADER == 1 & 
+                                                  ((PROVINCE == 1 & PERC_AB > 0) | (PROVINCE == 3 & PERC_MB > 0) | (PROVINCE == 12 & PERC_SK > 0)),
+                                                POLICY_AVERAGE,0 ))%>%
+  mutate(WQ_SUBBASIN_NL_SB_LP_POLICY = if_else(CHOICE_AREA == "SUBBASIN" &  CHOICE_LOCALITY_SUBBASIN == "NONLOCAL" & SHARED_BOADER == 0 & 
+                                                 ((PROVINCE == 1 & PERC_AB > 0) | (PROVINCE == 3 & PERC_MB > 0) | (PROVINCE == 12 & PERC_SK > 0)),
+                                               POLICY_AVERAGE,0 ))%>%
+  
+  mutate(WQ_SUBBASIN_NL_NSB_NLP_CURRENT = if_else(CHOICE_AREA == "SUBBASIN" & CHOICE_LOCALITY_SUBBASIN == "NONLOCAL" & SHARED_BOADER == 1 &
+                                                    ((PROVINCE == 1 & (PERC_MB > 0 | PERC_SK > 0) & PERC_AB == 0) |
+                                                       (PROVINCE == 3 & (PERC_AB > 0 | PERC_SK > 0) & PERC_MB == 0) |
+                                                       (PROVINCE == 12 & (PERC_AB > 0 | PERC_MB > 0) & PERC_SK == 0)), CURRENT_AVERAGE,0 )) %>%
+  mutate(WQ_SUBBASIN_NL_SB_NLP_CURRENT = if_else(CHOICE_AREA == "SUBBASIN" & CHOICE_LOCALITY_SUBBASIN == "NONLOCAL" & SHARED_BOADER == 0 &
+                                                   ((PROVINCE == 1 & (PERC_MB > 0 | PERC_SK > 0) & PERC_AB == 0) |
+                                                      (PROVINCE == 3 & (PERC_AB > 0 | PERC_SK > 0) & PERC_MB == 0) |
+                                                      (PROVINCE == 12 & (PERC_AB > 0 | PERC_MB > 0) & PERC_SK == 0)), CURRENT_AVERAGE,0 ))%>%
+  
+  mutate(WQ_SUBBASIN_NL_NSB_NLP_POLICY = if_else(CHOICE_AREA == "SUBBASIN" & CHOICE_LOCALITY_SUBBASIN == "NONLOCAL" & SHARED_BOADER == 1 &
+                                                   ((PROVINCE == 1 & (PERC_MB > 0 | PERC_SK > 0) & PERC_AB == 0) |
+                                                      (PROVINCE == 3 & (PERC_AB > 0 | PERC_SK > 0) & PERC_MB == 0) |
+                                                      (PROVINCE == 12 & (PERC_AB > 0 | PERC_MB > 0) & PERC_SK == 0)), POLICY_AVERAGE,0 )) %>%
+  mutate(WQ_SUBBASIN_NL_SB_NLP_POLICY = if_else(CHOICE_AREA == "SUBBASIN" & CHOICE_LOCALITY_SUBBASIN == "NONLOCAL" & SHARED_BOADER == 0 &
+                                                  ((PROVINCE == 1 & (PERC_MB > 0 | PERC_SK > 0) & PERC_AB == 0) |
+                                                     (PROVINCE == 3 & (PERC_AB > 0 | PERC_SK > 0) & PERC_MB == 0) |
+                                                     (PROVINCE == 12 & (PERC_AB > 0 | PERC_MB > 0) & PERC_SK == 0)), POLICY_AVERAGE,0 ))
+
 
   
 # Reorder columns to allingn with the order of the survey
 
 df_final <- df_final[, c( "CaseId","CONDITION","TREATMENT","VERSION","BLK_NUMBER","CHOICE_NUMBER","BASIN","SUB_BASIN","NON_LOCAL",
                           "IMAGEPOLICY","CURRENT_AVERAGE","POLICY_AVERAGE",
-                          "CHOICE_AREA","CHOICE_BASIN","CHOICE_LOCALITY_BASIN","CHOICE_LOCALITY_SUBBASIN",
+                          "CHOICE_AREA","CHOICE_BASIN","CHOICE_SUB_BASIN","CHOICE_LOCALITY_BASIN","CHOICE_LOCALITY_SUBBASIN",
                           "POLICY_SIZE_KM","POLICY_SIZE_PERCENT","WQ_UP1","WQ_UP2","WQ_UP3","WQ_BY1",
                           "WQ_LOCAL_CURRENT","WQ_NL_CURRENT","WQ_LOCAL_POLICY","WQ_NL_POLICY",
                           "WQ_HOME_CURRENT","WQ_HOME_POLICY",
                           "WQ_SUBBASIN_LOCAL_CURRENT","WQ_SUBBASIN_NL_CURRENT","WQ_SUBBASIN_LOCAL_POLICY","WQ_SUBBASIN_NL_POLICY",
                           "WQ_BASIN_LOCAL_CURRENT","WQ_BASIN_NL_CURRENT","WQ_BASIN_LOCAL_POLICY","WQ_BASIN_NL_POLICY",
+                          "WQ_SUBBASIN_LOCAL_NSB_CURRENT","WQ_SUBBASIN_LOCAL_SB_CURRENT","WQ_SUBBASIN_LOCAL_NSB_POLICY","WQ_SUBBASIN_LOCAL_SB_POLICY",
+                          "WQ_SUBBASIN_NL_NSB_LP_CURRENT","WQ_SUBBASIN_NL_SB_LP_CURRENT","WQ_SUBBASIN_NL_NSB_LP_POLICY","WQ_SUBBASIN_NL_SB_LP_POLICY",
+                          "WQ_SUBBASIN_NL_NSB_NLP_CURRENT","WQ_SUBBASIN_NL_SB_NLP_CURRENT","WQ_SUBBASIN_NL_NSB_NLP_POLICY","WQ_SUBBASIN_NL_SB_NLP_POLICY",
                           "COST","VOTE",
                           "UID","PROVINCE", "AGE", "GENDER", "LANGUAGE", "INCOME", "POSTALCODE",
                           "FAMILIARITY_RIVER_LAKES",
@@ -590,6 +739,7 @@ df_final <- df_final[, c( "CaseId","CONDITION","TREATMENT","VERSION","BLK_NUMBER
                           "Q20_MOVIE","Q21_MOVIE","Q22_MOVIE","Q23_MOVIE","Q24_MOVIE","Q25_MOVIE","Q26_MOVIE","Q27_MOVIE",
                           "Q28_MOVIE","Q29_MOVIE","Q30_MOVIE"
                      )]
+
 
 
 

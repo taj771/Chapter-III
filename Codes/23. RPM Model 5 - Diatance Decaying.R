@@ -55,15 +55,38 @@ database <- database %>%
 apollo_beta = c(
   mu_b_asc     = 0,  
   sigma_b_asc = 0.01,
-  b_cost  = 0,   
+  b_cost  = 0,  
+  
   mu_b_wq_local_basin = 0,
   sigma_b_wq_local_basin = 0.01,
+  
   mu_b_wq_nonlocal_basin = 0,
   sigma_b_wq_nonlocal_basin = 0.01,
-  mu_b_wq_local_sub_basin = 0,
-  sigma_b_wq_local_sub_basin = 0.01,
-  mu_b_wq_nonlocal_sub_basin = 0,
-  sigma_b_wq_nonlocal_sub_basin = 0.01
+  
+  #mu_b_wq_local_sub_basin = 0,
+  #sigma_b_wq_local_sub_basin = 0.01,
+  
+  #mu_b_wq_nonlocal_sub_basin = 0,
+  #sigma_b_wq_nonlocal_sub_basin = 0.01,
+  
+  mu_b_wq_sub_basin_local_nsb = 0,
+  sigma_b_wq_sub_basin_local_nsb = 0.01,
+  
+  mu_b_wq_sub_basin_local_sb = 0,
+  sigma_b_wq_sub_basin_local_sb = 0.01,
+  
+  
+  mu_b_wq_sub_basin_nonlocal_nsb_local_prov = 0,
+  sigma_b_wq_sub_basin_nonlocal_nsb_local_prov = 0.01,
+  
+  mu_b_wq_sub_basin_nonlocal_sb_local_prov = 0,
+  sigma_b_wq_sub_basin_nonlocal_sb_local_prov = 0.01,
+  
+  mu_b_wq_sub_basin_nonlocal_nsb_nonlocal_prov = 0,
+  sigma_b_wq_sub_basin_nonlocal_nsb_nonlocal_prov = 0.01,
+  
+  mu_b_wq_sub_basin_nonlocal_sb_nonlocal_prov = 0,
+  sigma_b_wq_sub_basin_nonlocal_sb_nonlocal_prov = 0.01
   
   
 )
@@ -81,7 +104,10 @@ apollo_draws = list(
   interDrawsType = "halton",
   interNDraws    = 1000,
   interUnifDraws = c(),
-  interNormDraws = c("draws_asc","draws_wq_local_basin","draws_wq_nonlocal_basin","draws_wq_local_sub_basin","draws_wq_nonlocal_sub_basin"),
+  interNormDraws = c("draws_asc","draws_wq_local_basin","draws_wq_nonlocal_basin","draws_wq_local_sub_basin",
+                     "draws_wq_nonlocal_sub_basin","draws_b_wq_sub_basin_sb","draws_b_wq_sub_basin_nsb",
+                     "draws_b_wq_sub_basin_nonlocal_nsb_local_prov","draws_b_wq_sub_basin_nonlocal_sb_local_prov",
+                     "draws_b_wq_sub_basin_nonlocal_nsb_nonlocal_prov","draws_b_wq_sub_basin_nonlocal_sb_nonlocal_prov"),
   intraDrawsType = "halton",
   intraNDraws    = 0,
   intraUnifDraws = c(),
@@ -94,11 +120,23 @@ apollo_randCoeff = function(apollo_beta, apollo_inputs){
   randcoeff = list()
   
   randcoeff[["b_asc"]] = mu_b_asc + sigma_b_asc*draws_asc 
+  
   randcoeff[["b_wq_local_basin"]] =  mu_b_wq_local_basin + sigma_b_wq_local_basin*draws_wq_local_basin
   randcoeff[["b_wq_nonlocal_basin"]] =  mu_b_wq_nonlocal_basin + sigma_b_wq_nonlocal_basin*draws_wq_nonlocal_basin
   
-  randcoeff[["b_wq_local_sub_basin"]] =  mu_b_wq_local_sub_basin + sigma_b_wq_local_sub_basin*draws_wq_local_sub_basin
-  randcoeff[["b_wq_nonlocal_sub_basin"]] =  mu_b_wq_nonlocal_sub_basin + sigma_b_wq_nonlocal_sub_basin*draws_wq_nonlocal_sub_basin
+  #randcoeff[["b_wq_local_sub_basin"]] =  mu_b_wq_local_sub_basin + sigma_b_wq_local_sub_basin*draws_wq_local_sub_basin
+  #randcoeff[["b_wq_nonlocal_sub_basin"]] =  mu_b_wq_nonlocal_sub_basin + sigma_b_wq_nonlocal_sub_basin*draws_wq_nonlocal_sub_basin
+  
+  randcoeff[["b_wq_sub_basin_local_nsb"]] =  mu_b_wq_sub_basin_local_nsb + sigma_b_wq_sub_basin_local_nsb*draws_b_wq_sub_basin_nsb
+  randcoeff[["b_wq_sub_basin_local_sb"]] =  mu_b_wq_sub_basin_local_sb + sigma_b_wq_sub_basin_local_sb*draws_b_wq_sub_basin_sb
+  
+  randcoeff[["b_wq_sub_basin_nonlocal_nsb_local_prov"]] =  mu_b_wq_sub_basin_nonlocal_nsb_local_prov + sigma_b_wq_sub_basin_nonlocal_nsb_local_prov*draws_b_wq_sub_basin_nonlocal_nsb_local_prov
+  randcoeff[["b_wq_sub_basin_nonlocal_sb_local_prov"]] =  mu_b_wq_sub_basin_nonlocal_sb_local_prov + sigma_b_wq_sub_basin_nonlocal_sb_local_prov*draws_b_wq_sub_basin_nonlocal_sb_local_prov
+  
+  randcoeff[["b_wq_sub_basin_nonlocal_nsb_nonlocal_prov"]] =  mu_b_wq_sub_basin_nonlocal_nsb_nonlocal_prov + sigma_b_wq_sub_basin_nonlocal_nsb_nonlocal_prov*draws_b_wq_sub_basin_nonlocal_nsb_nonlocal_prov
+  randcoeff[["b_wq_sub_basin_nonlocal_sb_nonlocal_prov"]] =  mu_b_wq_sub_basin_nonlocal_sb_nonlocal_prov + sigma_b_wq_sub_basin_nonlocal_sb_nonlocal_prov*draws_b_wq_sub_basin_nonlocal_sb_nonlocal_prov
+  
+  
   
   return(randcoeff)
 }
@@ -125,15 +163,41 @@ apollo_probabilities = function(apollo_beta, apollo_inputs, functionality = "est
   V[["policy"]]  = b_asc + b_cost *COST + 
     b_wq_local_basin*WQ_BASIN_LOCAL_POLICY +
     b_wq_nonlocal_basin*WQ_BASIN_NL_POLICY +
-    b_wq_local_sub_basin*WQ_SUBBASIN_LOCAL_POLICY +
-    b_wq_nonlocal_sub_basin*WQ_SUBBASIN_NL_POLICY
+    
+    #b_wq_local_sub_basin*WQ_SUBBASIN_LOCAL_POLICY +
+    #b_wq_nonlocal_sub_basin*WQ_SUBBASIN_NL_POLICY +
+    
+    b_wq_sub_basin_local_nsb*WQ_SUBBASIN_LOCAL_NSB_POLICY +
+    b_wq_sub_basin_local_sb*WQ_SUBBASIN_LOCAL_SB_POLICY +
+    
+    b_wq_sub_basin_nonlocal_nsb_local_prov*WQ_SUBBASIN_NL_NSB_LP_POLICY +
+    b_wq_sub_basin_nonlocal_sb_local_prov*WQ_SUBBASIN_NL_SB_LP_POLICY +
+    
+    b_wq_sub_basin_nonlocal_nsb_nonlocal_prov*WQ_SUBBASIN_NL_NSB_NLP_POLICY +
+    b_wq_sub_basin_nonlocal_sb_nonlocal_prov*WQ_SUBBASIN_NL_SB_NLP_POLICY 
+  
+  
+  
+  
+  
   
   
   V[["opt_out"]] = 
     b_wq_local_basin*WQ_BASIN_LOCAL_CURRENT +
-    b_wq_nonlocal_basin*WQ_BASIN_NL_CURRENT 
-    b_wq_local_sub_basin*WQ_SUBBASIN_LOCAL_CURRENT+
-    b_wq_nonlocal_sub_basin*WQ_SUBBASIN_NL_CURRENT
+    b_wq_nonlocal_basin*WQ_BASIN_NL_CURRENT  +
+    
+    #b_wq_local_sub_basin*WQ_SUBBASIN_LOCAL_CURRENT +
+    #b_wq_nonlocal_sub_basin*WQ_SUBBASIN_NL_CURRENT +
+    
+    b_wq_sub_basin_local_nsb*WQ_SUBBASIN_LOCAL_NSB_CURRENT +
+    b_wq_sub_basin_local_sb*WQ_SUBBASIN_LOCAL_SB_CURRENT +
+    
+    b_wq_sub_basin_nonlocal_nsb_local_prov*WQ_SUBBASIN_NL_NSB_LP_CURRENT +
+    b_wq_sub_basin_nonlocal_sb_local_prov*WQ_SUBBASIN_NL_SB_LP_CURRENT +
+    
+    b_wq_sub_basin_nonlocal_nsb_nonlocal_prov*WQ_SUBBASIN_NL_NSB_NLP_CURRENT +
+    b_wq_sub_basin_nonlocal_sb_nonlocal_prov*WQ_SUBBASIN_NL_SB_NLP_CURRENT 
+  
   
   
   # Define MNL settings
@@ -162,15 +226,14 @@ apollo_probabilities = function(apollo_beta, apollo_inputs, functionality = "est
 #### MODEL ESTIMATION                                            ####
 # ################################################################# #
 
-model_4_RPM = apollo_estimate(apollo_beta, apollo_fixed,apollo_probabilities, apollo_inputs)
+model = apollo_estimate(apollo_beta, apollo_fixed,apollo_probabilities, apollo_inputs)
 
 
 
 # Display model outputs
-apollo_modelOutput(model_4_RPM)
+apollo_modelOutput(model)
+
 
 # Save model outputs
-apollo_saveOutput(model_4_RPM)
-
- 
+apollo_saveOutput(model)
 
