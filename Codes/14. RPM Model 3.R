@@ -1,6 +1,7 @@
 ########################################################################################
-# Description: RPM Model 2
+# Description: RPM Model 3
 #######################################################################################
+
 
 ### Clear memory
 rm(list = ls())
@@ -16,6 +17,7 @@ apollo_initialise()
 
 ### Set core controls
 apollo_control = list(
+  modelName       = "RPM Model 3",
   modelDescr      = "Mixed-MNL",
   indivID         = "CaseId",  
   nCores          = 4,
@@ -32,12 +34,13 @@ database <- read_csv("Deriveddata/processed_pilotdata_1_Apollo.csv")
 database <- database %>%
   arrange(CaseId)
 
+
 database <- database %>%
   filter(!is.na(VOTE))%>%
-  filter(!is.na(POLICY_AVERAGE))%>%
-  filter(!is.na(CURRENT_AVERAGE))
-
-
+  filter(!is.na(WQ_LOCAL_CURRENT))%>%
+  filter(!is.na(WQ_NL_CURRENT))%>%
+  filter(!is.na(WQ_LOCAL_POLICY))%>%
+  filter(!is.na(WQ_NL_POLICY))
 # ################################################################# #
 #### DEFINE MODEL PARAMETERS                                     ####
 # ################################################################# #
@@ -46,8 +49,10 @@ apollo_beta = c(
   mu_b_asc     = 0,  
   sigma_b_asc = 0.01,
   b_cost  = 0,   
-  mu_b_wq = 0,
-  sigma_b_wq = 0.01
+  mu_b_wq_local = 0,
+  sigma_b_wq_local = 0.01,
+  mu_b_wq_nonlocal = 0,
+  sigma_b_wq_nonlocal = 0.01
 )
 
 ### Vector with names (in quotes) of parameters to be kept fixed at their starting value in apollo_beta, use apollo_beta_fixed = c() if none
@@ -63,7 +68,7 @@ apollo_draws = list(
   interDrawsType = "halton",
   interNDraws    = 1000,
   interUnifDraws = c(),
-  interNormDraws = c("draws_asc","draws_wq"),
+  interNormDraws = c("draws_asc","draws_wq_local","draws_wq_nonlocal"),
   intraDrawsType = "halton",
   intraNDraws    = 0,
   intraUnifDraws = c(),
@@ -76,7 +81,9 @@ apollo_randCoeff = function(apollo_beta, apollo_inputs){
   randcoeff = list()
   
   randcoeff[["b_asc"]] = mu_b_asc + sigma_b_asc*draws_asc 
-  randcoeff[["b_wq"]] =  mu_b_wq + sigma_b_wq*draws_wq
+  randcoeff[["b_wq_local"]] =  mu_b_wq_local + sigma_b_wq_local*draws_wq_local
+  randcoeff[["b_wq_nonlocal"]] =  mu_b_wq_nonlocal + sigma_b_wq_nonlocal*draws_wq_nonlocal
+  
   
   
   return(randcoeff)
@@ -101,8 +108,16 @@ apollo_probabilities = function(apollo_beta, apollo_inputs, functionality = "est
   
   # Define utilities
   V = list()
-  V[["policy"]]  = b_asc + b_cost *COST + b_wq*POLICY_AVERAGE 
-  V[["opt_out"]] = b_wq*CURRENT_AVERAGE  # Utility for opting out
+  V[["policy"]]  = b_asc + b_cost *COST + 
+    #b_wq_home*WQ_HOME_POLICY +
+    b_wq_local*WQ_LOCAL_POLICY +
+    b_wq_nonlocal*WQ_NL_POLICY 
+  
+  
+  V[["opt_out"]] = 
+    b_wq_local*WQ_LOCAL_CURRENT +
+    b_wq_nonlocal*WQ_NL_CURRENT 
+  
   
   # Define MNL settings
   mnl_settings = list(
@@ -136,3 +151,7 @@ model = apollo_estimate(apollo_beta, apollo_fixed,apollo_probabilities, apollo_i
 
 # Display model outputs
 apollo_modelOutput(model)
+
+
+# Save model outputs
+apollo_saveOutput(model)

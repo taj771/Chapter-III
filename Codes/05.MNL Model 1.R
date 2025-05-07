@@ -102,3 +102,5 @@ deltaMethod(
   g = "-(b_asc)/(b_cost)"
 )
 
+# Save model outputs
+apollo_saveOutput(model)

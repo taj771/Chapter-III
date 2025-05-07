@@ -1,6 +1,8 @@
 ########################################################################################
-# Description: MNL Model 3
-# WQ parameters seperate into local basin changes and non-local basin changes
+# Description: MNL Model 4_1 (This is an extension of MNL model 4 where we incorporate WQ change
+# at sub basin level as WQ at sub basin level insted of Basin level average compared to MNL Model 4)
+# WQ parameters further seperate into local basin changes, local sub basin changes, 
+# non-local basin changes and non-local sub basin chnages
 #######################################################################################
 
 # Clean the memory
@@ -9,7 +11,6 @@ rm(list = ls())  # Removes all objects in the environment
 # Load dataset
 apollo_modeChoiceData <- read_csv("Deriveddata/processed_pilotdata_1_Apollo.csv")
 
-
 # Arrange data by RespondentID
 database <- apollo_modeChoiceData %>%
   arrange(CaseId)
@@ -17,30 +18,45 @@ database <- apollo_modeChoiceData %>%
 
 database <- database %>%
   filter(!is.na(VOTE))%>%
-  filter(!is.na(WQ_LOCAL_CURRENT))%>%
-  filter(!is.na(WQ_NL_CURRENT))%>%
-  filter(!is.na(WQ_LOCAL_POLICY))%>%
-  filter(!is.na(WQ_NL_POLICY))
+  
+  filter(!is.na(WQ_SUBBASIN_LOCAL_CURRENT_SUBONLY))%>%
+  filter(!is.na(WQ_SUBBASIN_NL_CURRENT_SUBONLY))%>%
+  
+  filter(!is.na(WQ_SUBBASIN_LOCAL_POLICY_SUBONLY))%>%
+  filter(!is.na(WQ_SUBBASIN_NL_POLICY_SUBONLY))%>%
+  
+  filter(!is.na(WQ_BASIN_LOCAL_CURRENT))%>%
+  filter(!is.na(WQ_BASIN_NL_CURRENT))%>%
+  
+  filter(!is.na(WQ_BASIN_LOCAL_POLICY))%>%
+  filter(!is.na(WQ_BASIN_NL_POLICY))
+
+
+
+
 
 # Initialise Apollo
 apollo_initialise()
 
 # Set core controls
 apollo_control = list(
-  modelName       = "MNL Model 3",
-  modelDescr      = "",
+  modelName       = "MNL Model 4_1",
+  modelDescr      = "Simple MNL model on mode choice SP data",
   indivID         = "CaseId",
   outputDirectory = "output"
 )
 
 # Define model parameters
 apollo_beta = c(
-  b_asc     = 0,  
-  b_cost  = 0,  
-  b_wq_local =0,           # WQ change within local watershed
-  b_wq_nonlocal =0         # WQ change within non-local watershed
+  b_asc     = 0, 
+  b_cost  = 0,   
+  b_wq_local_basin =0,           # WQ chnage in local basin
+  b_wq_nonlocal_basin =0,        # WQ chnage in non-local basin
+  b_wq_local_sub_basin = 0,      # WQ chnage in local sub basin
+  b_wq_nonlocal_sub_basin = 0.   # WQ chnage in non-local sub basin
   
 ) 
+
 
 
 # No parameters are fixed
@@ -62,15 +78,18 @@ apollo_probabilities = function(apollo_beta, apollo_inputs, functionality = "est
   # Define utilities
   V = list()
   V[["policy"]]  = b_asc + b_cost *COST + 
-    #b_wq_home*WQ_HOME_POLICY +
-    b_wq_local*WQ_LOCAL_POLICY +
-    b_wq_nonlocal*WQ_NL_POLICY 
+    b_wq_local_basin*WQ_BASIN_LOCAL_POLICY +
+    b_wq_nonlocal_basin*WQ_BASIN_NL_POLICY +
+    b_wq_local_sub_basin*WQ_SUBBASIN_LOCAL_POLICY_SUBONLY +
+    b_wq_nonlocal_sub_basin*WQ_SUBBASIN_NL_POLICY_SUBONLY
   
   
   V[["opt_out"]] = 
-    b_wq_local*WQ_LOCAL_CURRENT +
-    b_wq_nonlocal*WQ_NL_CURRENT 
-
+    b_wq_local_basin*WQ_BASIN_LOCAL_CURRENT +
+    b_wq_nonlocal_basin*WQ_BASIN_NL_CURRENT 
+  b_wq_local_sub_basin*WQ_SUBBASIN_LOCAL_CURRENT_SUBONLY +
+    b_wq_nonlocal_sub_basin*WQ_SUBBASIN_NL_CURRENT_SUBONLY
+  
   
   
   # Define MNL settings
@@ -99,7 +118,6 @@ model = apollo_estimate(apollo_beta, apollo_fixed, apollo_probabilities, apollo_
 apollo_modelOutput(model)
 
 
+
 # Save model outputs
 apollo_saveOutput(model)
-
-

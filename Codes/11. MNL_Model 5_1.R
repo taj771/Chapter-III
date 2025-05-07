@@ -17,7 +17,8 @@ apollo_initialise()
 
 ### Set core controls
 apollo_control = list(
-  modelDescr      = "Mixed-MNL",
+  modelName       = "MNL Model 5_1",
+  modelDescr      = "",
   indivID         = "CaseId",  
   nCores          = 4,
   outputDirectory = "output"
@@ -36,11 +37,11 @@ database <- database %>%
 database <- database %>%
   filter(!is.na(VOTE))%>%
   
-  filter(!is.na(WQ_SUBBASIN_LOCAL_CURRENT))%>%
-  filter(!is.na(WQ_SUBBASIN_NL_CURRENT))%>%
+  filter(!is.na(WQ_SUBBASIN_LOCAL_CURRENT_SUBONLY))%>%
+  filter(!is.na(WQ_SUBBASIN_NL_CURRENT_SUBONLY))%>%
   
-  filter(!is.na(WQ_SUBBASIN_LOCAL_POLICY))%>%
-  filter(!is.na(WQ_SUBBASIN_NL_POLICY))%>%
+  filter(!is.na(WQ_SUBBASIN_LOCAL_POLICY_SUBONLY))%>%
+  filter(!is.na(WQ_SUBBASIN_NL_POLICY_SUBONLY))%>%
   
   filter(!is.na(WQ_BASIN_LOCAL_CURRENT))%>%
   filter(!is.na(WQ_BASIN_NL_CURRENT))%>%
@@ -91,14 +92,14 @@ apollo_probabilities = function(apollo_beta, apollo_inputs, functionality = "est
     #b_wq_local_sub_basin*WQ_SUBBASIN_LOCAL_POLICY +
     #b_wq_nonlocal_sub_basin*WQ_SUBBASIN_NL_POLICY +
     
-    b_wq_sub_basin_local_nsb*WQ_SUBBASIN_LOCAL_NSB_POLICY +
-    b_wq_sub_basin_local_sb*WQ_SUBBASIN_LOCAL_SB_POLICY +
+    b_wq_sub_basin_local_nsb*WQ_SUBBASIN_LOCAL_NSB_POLICY_SUBONLY +
+    b_wq_sub_basin_local_sb*WQ_SUBBASIN_LOCAL_SB_POLICY_SUBONLY +
     
-    b_wq_sub_basin_nonlocal_nsb_local_prov*WQ_SUBBASIN_NL_NSB_LP_POLICY +
-    b_wq_sub_basin_nonlocal_sb_local_prov*WQ_SUBBASIN_NL_SB_LP_POLICY +
+    b_wq_sub_basin_nonlocal_nsb_local_prov*WQ_SUBBASIN_NL_NSB_LP_POLICY_SUBONLY +
+    b_wq_sub_basin_nonlocal_sb_local_prov*WQ_SUBBASIN_NL_SB_LP_POLICY_SUBONLY +
     
-    b_wq_sub_basin_nonlocal_nsb_nonlocal_prov*WQ_SUBBASIN_NL_NSB_NLP_POLICY +
-    b_wq_sub_basin_nonlocal_sb_nonlocal_prov*WQ_SUBBASIN_NL_SB_NLP_POLICY 
+    b_wq_sub_basin_nonlocal_nsb_nonlocal_prov*WQ_SUBBASIN_NL_NSB_NLP_POLICY_SUBONLY +
+    b_wq_sub_basin_nonlocal_sb_nonlocal_prov*WQ_SUBBASIN_NL_SB_NLP_POLICY_SUBONLY 
   
   
   V[["opt_out"]] = 
@@ -108,14 +109,14 @@ apollo_probabilities = function(apollo_beta, apollo_inputs, functionality = "est
     #b_wq_local_sub_basin*WQ_SUBBASIN_LOCAL_CURRENT +
     #b_wq_nonlocal_sub_basin*WQ_SUBBASIN_NL_CURRENT +
     
-    b_wq_sub_basin_local_nsb*WQ_SUBBASIN_LOCAL_NSB_CURRENT +
-    b_wq_sub_basin_local_sb*WQ_SUBBASIN_LOCAL_SB_CURRENT +
+    b_wq_sub_basin_local_nsb*WQ_SUBBASIN_LOCAL_NSB_CURRENT_SUBONLY +
+    b_wq_sub_basin_local_sb*WQ_SUBBASIN_LOCAL_SB_CURRENT_SUBONLY +
     
-    b_wq_sub_basin_nonlocal_nsb_local_prov*WQ_SUBBASIN_NL_NSB_LP_CURRENT +
-    b_wq_sub_basin_nonlocal_sb_local_prov*WQ_SUBBASIN_NL_SB_LP_CURRENT +
+    b_wq_sub_basin_nonlocal_nsb_local_prov*WQ_SUBBASIN_NL_NSB_LP_CURRENT_SUBONLY +
+    b_wq_sub_basin_nonlocal_sb_local_prov*WQ_SUBBASIN_NL_SB_LP_CURRENT_SUBONLY +
     
-    b_wq_sub_basin_nonlocal_nsb_nonlocal_prov*WQ_SUBBASIN_NL_NSB_NLP_CURRENT +
-    b_wq_sub_basin_nonlocal_sb_nonlocal_prov*WQ_SUBBASIN_NL_SB_NLP_CURRENT 
+    b_wq_sub_basin_nonlocal_nsb_nonlocal_prov*WQ_SUBBASIN_NL_NSB_NLP_CURRENT_SUBONLY +
+    b_wq_sub_basin_nonlocal_sb_nonlocal_prov*WQ_SUBBASIN_NL_SB_NLP_CURRENT_SUBONLY 
   
   # Define MNL settings
   mnl_settings = list(
@@ -142,6 +143,7 @@ model = apollo_estimate(apollo_beta, apollo_fixed, apollo_probabilities, apollo_
 # Display model outputs
 apollo_modelOutput(model)
 
-
+# Save model outputs
+apollo_saveOutput(model)
 
 

@@ -3,11 +3,8 @@
 ### Clear memory
 rm(list = ls())
 
-# Load packages
-library(officer)
-library(flextable)
 
-estimates_df <- read.csv("output/model_20250504223044.796877_estimates.csv")%>%
+estimates_df <- read.csv("output/RPM Model 4_estimates.csv")%>%
   select(X,Estimate,Rob.std.err.,Rob.t.ratio.0.)%>%
   mutate(Significance = case_when(
     abs(Rob.t.ratio.0.) >= 3.291 ~ "***",  # p < 0.001
@@ -98,16 +95,16 @@ df_final <- df1%>%
     Parameter == "b_cost" ~ "Cost",
     Parameter == "b_wq_local_basin" ~ "Local Basin",
     Parameter == "b_wq_nonlocal_basin" ~ "Non-local Basin",
-    Parameter == "b_wq_sub_basin_local_nsb" ~ "Local Sub Basin - No Sharing Boundary",
-    Parameter == "b_wq_sub_basin_local_sb" ~ "Local Sub Basin - Sharing Boundary",
-    Parameter == "b_wq_sub_basin_nonlocal_nsb_local_prov" ~ "Non-local Sub Basin - within home Province & No Sharing Boundary",
-    Parameter == "b_wq_sub_basin_nonlocal_nsb_nonlocal_prov" ~ "Non-local Sub Basin - within non-home Province & No Sharing Boundary",
-    Parameter == "b_wq_sub_basin_nonlocal_sb_local_prov" ~ "Non-local Sub Basin within home Province & Sharing Boundary",
-    Parameter == "b_wq_sub_basin_nonlocal_sb_nonlocal_prov" ~ "Non-local Sub Basin within non-home Province & Sharing Boundary",
+    Parameter == "b_wq_local_sub_basin" ~ "Local Sub Basin",
+    Parameter == "b_wq_nonlocal_sub_basin" ~ "Non-Local Sub Basin",
     TRUE ~ Parameter  # keep all other values as-is
   ))
 
 
+
+# Load packages
+library(officer)
+library(flextable)
 
 # Example: use your dataframe, e.g., df_final
 ft <- flextable(df_final)
@@ -118,4 +115,4 @@ doc <- read_docx() %>%
   body_add_flextable(ft)
 
 # Save to file
-print(doc, target = "Tables/model_5_output.docx")
+print(doc, target = "Tables/RPM_Model_4.docx")

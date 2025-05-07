@@ -84,4 +84,4 @@ model = apollo_estimate(apollo_beta, apollo_fixed, apollo_probabilities, apollo_
 apollo_modelOutput(model)
 
 # Save model outputs
-#apollo_saveOutput(model)
+apollo_saveOutput(model)

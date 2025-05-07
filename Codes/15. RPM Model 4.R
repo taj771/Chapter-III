@@ -17,6 +17,7 @@ apollo_initialise()
 
 ### Set core controls
 apollo_control = list(
+  modelName       = "RPM Model 4",
   modelDescr      = "Mixed-MNL",
   indivID         = "CaseId",  
   nCores          = 4,
@@ -162,15 +163,15 @@ apollo_probabilities = function(apollo_beta, apollo_inputs, functionality = "est
 #### MODEL ESTIMATION                                            ####
 # ################################################################# #
 
-model_4_RPM = apollo_estimate(apollo_beta, apollo_fixed,apollo_probabilities, apollo_inputs)
+model = apollo_estimate(apollo_beta, apollo_fixed,apollo_probabilities, apollo_inputs)
 
 
 
 # Display model outputs
-apollo_modelOutput(model_4_RPM)
+apollo_modelOutput(model)
 
 # Save model outputs
-apollo_saveOutput(model_4_RPM)
+apollo_saveOutput(model)
 
  
 

@@ -39,7 +39,7 @@ apollo_initialise()
 
 # Set core controls
 apollo_control = list(
-  modelName       = "MNL_SP",
+  modelName       = "MNL Model 4",
   modelDescr      = "Simple MNL model on mode choice SP data",
   indivID         = "CaseId",
   outputDirectory = "output"
@@ -115,3 +115,6 @@ model = apollo_estimate(apollo_beta, apollo_fixed, apollo_probabilities, apollo_
 
 # Display model outputs
 apollo_modelOutput(model)
+
+# Save model outputs
+apollo_saveOutput(model)
