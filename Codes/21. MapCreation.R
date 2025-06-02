@@ -30,6 +30,33 @@ df <- st_read("/Users/tharakajayalath/Library/CloudStorage/OneDrive-Universityof
     
     TRUE ~ NA_character_  # Otherwise, assign 0
   ))%>%
+  
+  mutate(name_code = case_when(
+    WSCSDA_E == "Qu'Appelle" ~ "QU", 
+    WSCSDA_E == "Assiniboine" ~ "AS", 
+    WSCSDA_E == "Souris" ~ "SO", 
+    WSCSDA_E == "Red" ~ "RE", 
+    
+    WSCSDA_E == "Grass and Burntwood River Basin" ~ "GB", 
+    WSCSDA_E == "Nelson River Basin" ~ "NE", 
+    WSCSDA_E == "Saskatchewan River Basin" ~ "SA", 
+    WSCSDA_E == "Eastern Lake Winnipeg River Basin" ~ "ELW", 
+    WSCSDA_E == "Lake Winnipegosis and Lake Manitoba River Basin" ~ "LWM", 
+    WSCSDA_E == "Western Lake Winnipeg River Basin" ~ "WLW", 
+    
+    WSCSDA_E == "Central North Saskatchewan Sub River Basin" ~ "CNS", 
+    WSCSDA_E == "Upper North Saskatchewan Sub River Basin" ~ "UNS", 
+    WSCSDA_E == "Battle Sub River Basin" ~ "BA", 
+    WSCSDA_E == "Lower North Saskatchewan Sub River Basin" ~ "LNS", 
+    
+    WSCSDA_E == "Bow Sub River Basin" ~ "BO", 
+    WSCSDA_E == "Red Deer Sub River Basin" ~ "RD", 
+    WSCSDA_E == "Lower South Saskatchewan Sub River Basin" ~ "LSS", 
+    WSCSDA_E == "Upper South Saskatchewan Sub River Basin" ~ "USS", 
+    
+    TRUE ~ NA_character_  # Otherwise, assign 0
+  ))%>%
+  
   mutate(WQ_V1 = case_when(
     WSCSDA_E == "Qu'Appelle" ~ "Level 3", 
     WSCSDA_E == "Assiniboine" ~ "Level 3", 
@@ -109,24 +136,27 @@ sk <- st_transform(sk, crs = 4326)
 
 
 
-# Plot
-tmap_mode("view")
+
 
 df$WQ_V1 <- as.factor(df$WQ_V1)  # or as.character()
 
 # Define custom colors (names must match factor levels exactly)
 custom_colors <- c("Level 1" = "lightblue", "Level 2" = "darkgreen", "Level 3" = "yellow", "Level 4" = "orange", "Level 5" = "red")
 
+tmap_mode("plot")
 
-tm_shape(df) +
-  tm_fill(col = "WQ_V1", palette = custom_colors, style = "quantile", title = "Legend Title") +
+
+
+
+p1 <- tm_shape(df, crs = 3347) +
+  tm_fill(col = "WQ_V1", palette = custom_colors, style = "quantile", title = "") +
   tm_borders() +
-  tm_text("name", size = 0.8, col = "black", remove.overlap = TRUE)+  # Adjust size,
-  tm_shape(ab) +
+  tm_text("name_code", size = 0.8, col = "black", remove.overlap = TRUE)+  # Adjust size,
+  tm_shape(ab, crs = 3347) +
   tm_borders(col = "black", lwd = 2)+
-  tm_shape(mb) +
+  tm_shape(mb, crs = 3347) +
   tm_borders(col = "black", lwd = 2)+
-  tm_shape(sk) +
+  tm_shape(sk, crs = 3347) +
   tm_borders(col = "black", lwd = 2)+ 
   #tm_shape(ab_cities) +
   #tm_borders(col = "black", lwd = 2)+
@@ -138,5 +168,39 @@ tm_shape(df) +
   #tm_borders(col = "black", lwd = 2)+ 
   #tm_text("name", size = 0.6, col = "black", remove.overlap = TRUE)+  # Adjust size,
   tm_layout(frame = FALSE)+
-  tm_basemap("CartoDB.Positron")  # Change to Esri World Imagery
+  tm_legend(frame = F)
 
+
+# Save it as a PNG
+tmap_save(p1, filename = "Figures/subbasin_wq_v1_map.png", width = 10, height = 8, units = "in", dpi = 300)
+
+
+
+p2 <- tm_shape(df, crs = 3347) +
+  tm_fill(col = "WQ_V2", palette = custom_colors, style = "quantile", title = "") +
+  tm_borders() +
+  tm_text("name_code", size = 0.8, col = "black", remove.overlap = TRUE)+  # Adjust size,
+  tm_shape(ab, crs = 3347) +
+  tm_borders(col = "black", lwd = 2)+
+  tm_shape(mb, crs = 3347) +
+  tm_borders(col = "black", lwd = 2)+
+  tm_shape(sk, crs = 3347) +
+  tm_borders(col = "black", lwd = 2)+ 
+  #tm_shape(ab_cities) +
+  #tm_borders(col = "black", lwd = 2)+
+  #tm_text("name", size = 0.6, col = "black", remove.overlap = TRUE)+  # Adjust size,
+  #tm_shape(mb_cities) +
+  #tm_borders(col = "black", lwd = 2)+
+  #tm_text("name", size = 0.6, col = "black", remove.overlap = TRUE)+  # Adjust size,
+  #tm_shape(sk_cities) +
+  #tm_borders(col = "black", lwd = 2)+ 
+  #tm_text("name", size = 0.6, col = "black", remove.overlap = TRUE)+  # Adjust size,
+  tm_layout(frame = FALSE)+
+  tm_legend(frame = F)
+
+
+# Save it as a PNG
+tmap_save(p2, filename = "Figures/subbasin_wq_v2_map.png", width = 10, height = 8, units = "in", dpi = 300)
+
+
+st_write(df, "/Users/tharakajayalath/Library/CloudStorage/OneDrive-UniversityofSaskatchewan/Chapter III-UseNonUseValue/Survey/Shapefile/study_area_map_with_WQ.shp")

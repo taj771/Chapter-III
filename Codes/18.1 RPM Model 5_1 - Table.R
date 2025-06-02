@@ -121,3 +121,13 @@ doc <- read_docx() %>%
 
 # Save to file
 print(doc, target = "Tables/RPM_Model_5_1.docx")
+
+
+library(xtable)
+
+# Example: Convert your dataframe to LaTeX
+latex_table <- xtable(df_final, caption = "Model Output")
+
+# Save as .tex file
+print(latex_table, file = "Tables/RPM_Model_5_1.tex", include.rownames = FALSE)
+

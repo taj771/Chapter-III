@@ -6,7 +6,7 @@ library(readr)
 
 
 library(haven)
-df <- read_dta("~/Library/CloudStorage/OneDrive-UniversityofSaskatchewan/Chapter III-UseNonUseValue/R/Vossler/BCG survey replication data.dta")
+df <- read_dta("~/Library/CloudStorage/OneDrive-UniversityofSaskatchewan/Chapter III-UseNonUseValue/Other/Vossler/BCG survey replication data.dta")
 
 df1 <- df%>%
   select(RespondentID,HUC4,HUC4_NL,HUC4Area,HUC4Area_NL,HUC4BCG_1up,HUC4BCG_1up_NL,HUC4BCG_base,
@@ -18,5 +18,9 @@ df1 <- df%>%
 colnames(df)
 
 
+library(labelled)
+val_labels(df$Spatial_Unit)
 
-
+t <- df%>%
+  filter(Spatial_Unit==1)%>%
+  select(WQ_HUC8)

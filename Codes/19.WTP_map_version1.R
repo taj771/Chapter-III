@@ -8,6 +8,10 @@ rm(list = ls())
 
 ### Load Apollo library
 library(apollo)
+library(dplyr)
+library(purrr)
+library(msm)  # for deltaMethod
+
 
 ### Set working directory (only works in RStudio)
 #apollo_setWorkDir()
@@ -234,140 +238,175 @@ model = apollo_estimate(apollo_beta, apollo_fixed,apollo_probabilities, apollo_i
 # Display model outputs
 apollo_modelOutput(model)
 
+
 # Extract coefficients and covariance matrix
 coef_values <- model$estimate
 vcov_matrix <- model$robvarcov
 
 
-# WTP for one unit improvement of WQ at Local Basin
 
-df1 <- deltaMethod(
-  object = coef_values, 
-  vcov. = vcov_matrix, 
-  g = "-(mu_b_asc + mu_b_wq_local_basin*(-1))/b_cost"
-)%>% 
-  {`rownames<-`(., NULL)}%>%
-  mutate(`WQ change scenario` = "Local Basin")%>%
-  relocate(`WQ change scenario`, .before = 1)%>%
-  mutate(across(where(is.numeric), ~ round(.x, 0)))
-
-
-# WTP for one unit improvement of WQ at Non-Local Basin
-
-df2 <- deltaMethod(
-  object = coef_values, 
-  vcov. = vcov_matrix, 
-  g = "-(mu_b_asc + mu_b_wq_nonlocal_basin*(-1))/b_cost"
-)%>% 
-  {`rownames<-`(., NULL)}%>%
-  mutate(`WQ change scenario` = "Non-Local Basin")%>%
-  relocate(`WQ change scenario`, .before = 1)%>%
-  mutate(across(where(is.numeric), ~ round(.x, 0)))
+df <- st_read("/Users/tharakajayalath/Library/CloudStorage/OneDrive-UniversityofSaskatchewan/Chapter III-UseNonUseValue/Survey/Shapefile/study_area_map_with_WQ.shp")%>%
+  mutate(WQ_V1 = str_remove(WQ_V1, "Level"))%>%
+  mutate(WQ_V2 = str_remove(WQ_V2, "Level"))%>%
+  mutate(WQ_V1 = as.numeric(WQ_V1))%>%
+  mutate(WQ_V2 = as.numeric(WQ_V2))%>%
+  group_by(basin)%>%
+  mutate(AVE_WQ_BASIN_V1 = mean(WQ_V1))%>%
+  mutate(AVE_WQ_BASIN_V2 = mean(WQ_V2))
 
 
 
-# WTP for one unit improvement of WQ at Local Sub Basin - No Sharing Boundary
 
-df3 <- deltaMethod(
-  object = coef_values, 
-  vcov. = vcov_matrix, 
-  g = "-(mu_b_asc + mu_b_wq_sub_basin_local_nsb*(-1))/b_cost"
-)%>% 
-  {`rownames<-`(., NULL)}%>%
-  mutate(`WQ change scenario` = "Local Sub Basin - No Sharing Boundary")%>%
-  relocate(`WQ change scenario`, .before = 1)%>%
-  mutate(across(where(is.numeric), ~ round(.x, 0)))
+# List of basin codes
+basin_codes <- c("SS", "NS", "LSN", "AR")
 
+# Loop to assign each variable dynamically
+walk(basin_codes, function(code) {
+  value <- df %>%
+    filter(basin == code) %>%
+    pull(AVE_WQ_BASIN_V1) %>%
+    .[[1]]
+  
+  assign(paste0("wq_basin_current_", tolower(code)), value, envir = .GlobalEnv)
+})
 
-# WTP for one unit improvement of WQ at Local Sub Basin - Sharing Boundary
+# Create a lookup table of basins and their current WQ values
+basins <- tibble(
+  basin = c("SS", "NS", "LSN", "AR"),
+  wq_value = c(wq_basin_current_ss, wq_basin_current_ns, 
+               wq_basin_current_lsn, wq_basin_current_ar)
+)
 
-df4 <- deltaMethod(
-  object = coef_values, 
-  vcov. = vcov_matrix, 
-  g = "-(mu_b_asc + mu_b_wq_sub_basin_local_sb *(-1))/b_cost"
-)%>% 
-  {`rownames<-`(., NULL)}%>%
-  mutate(`WQ change scenario` = "Local Sub Basin - Sharing Boundary")%>%
-  relocate(`WQ change scenario`, .before = 1)%>%
-  mutate(across(where(is.numeric), ~ round(.x, 0)))
-
-
-
-# WTP for one unit improvement of WQ at Non-local Sub Basin - within home Province & No Sharing Boundary
-
-df5 <- deltaMethod(
-  object = coef_values, 
-  vcov. = vcov_matrix, 
-  g = "-(mu_b_asc + mu_b_wq_sub_basin_nonlocal_nsb_local_prov *(-1))/b_cost"
-)%>% 
-  {`rownames<-`(., NULL)}%>%
-  mutate(`WQ change scenario` = "Non-local Sub Basin - within home Province & No Sharing Boundary")%>%
-  relocate(`WQ change scenario`, .before = 1)%>%
-  mutate(across(where(is.numeric), ~ round(.x, 0)))
+# Apply deltaMethod over each basin using map2_dfr
+df_basin <- map2_dfr(
+  basins$basin, basins$wq_value,
+  ~ deltaMethod(
+    object = coef_values,
+    vcov. = vcov_matrix,
+    g = paste0("-((mu_b_asc + mu_b_wq_local_basin*2 - (mu_b_wq_local_basin*", .y, "))/b_cost)")
+  ) %>%
+    mutate(basin = .x, subbasin = "all")
+)
 
 
 
-# WTP for one unit improvement of WQ at Non-local Sub Basin - within non-home Province & No Sharing Boundary
+## sub basins 
 
-df6 <- deltaMethod(
-  object = coef_values, 
-  vcov. = vcov_matrix, 
-  g = "-(mu_b_asc + mu_b_wq_sub_basin_nonlocal_nsb_nonlocal_prov  *(-1))/b_cost"
-)%>% 
-  {`rownames<-`(., NULL)}%>%
-  mutate(`WQ change scenario` = "Non-local Sub Basin - within non-home Province & No Sharing Boundary")%>%
-  relocate(`WQ change scenario`, .before = 1)%>%
-  mutate(across(where(is.numeric), ~ round(.x, 0)))
+# Define your codes
+subbasin_codes <- c("USS", "LSS", "RD", "BO", "LNS", "BA", "UNS", "CNS", 
+                    "WLW", "LWM", "ELW", "SA", "NE", "GB", "AS", "QU", 
+                    "RE", "SO")
 
-
-
-# WTP for one unit improvement of WQ at Non-local Sub Basin within home Province & Sharing Boundary
-
-df7 <- deltaMethod(
-  object = coef_values, 
-  vcov. = vcov_matrix, 
-  g = "-(mu_b_asc + mu_b_wq_sub_basin_nonlocal_sb_local_prov*(-1))/b_cost"
-)%>% 
-  {`rownames<-`(., NULL)}%>%
-  mutate(`WQ change scenario` = "Non-local Sub Basin within home Province & Sharing Boundary")%>%
-  relocate(`WQ change scenario`, .before = 1)%>%
-  mutate(across(where(is.numeric), ~ round(.x, 0)))
+# Loop and assign variables dynamically
+walk(subbasin_codes, function(code) {
+  value <- df %>%
+    filter(name_code == code) %>%
+    pull(WQ_V1) %>%
+    .[[1]]
+  
+  assign(paste0("wq_subbasin_current_", tolower(code)), value, envir = .GlobalEnv)
+})
 
 
-# WTP for one unit improvement of WQ at Non-local Sub Basin within non-home Province & Sharing Boundary
+  
+subbasins <- tibble(
+  subbasin = c("USS", "LSS", "RD", "BO", "LNS", "BA", "UNS", "CNS", 
+               "WLW", "LWM", "ELW", "SA", "NE", "GB", "AS", "QU", 
+               "RE", "SO"),
+  wq_value = c(
+    wq_subbasin_current_uss, wq_subbasin_current_lss, wq_subbasin_current_rd,
+    wq_subbasin_current_bo, wq_subbasin_current_lns, wq_subbasin_current_ba,
+    wq_subbasin_current_uns, wq_subbasin_current_cns, wq_subbasin_current_wlw,
+    wq_subbasin_current_lwm, wq_subbasin_current_elw, wq_subbasin_current_sa,
+    wq_subbasin_current_ne, wq_subbasin_current_gb, wq_subbasin_current_as,
+    wq_subbasin_current_qu, wq_subbasin_current_re, wq_subbasin_current_so
+  )
+)
 
-df8 <- deltaMethod(
-  object = coef_values, 
-  vcov. = vcov_matrix, 
-  g = "-(mu_b_asc + mu_b_wq_sub_basin_nonlocal_sb_nonlocal_prov*(-1))/b_cost"
-) %>% 
-  {`rownames<-`(., NULL)}%>%
-  mutate(`WQ change scenario` = "Non-local Sub Basin within non-home Province & Sharing Boundary")%>%
-  relocate(`WQ change scenario`, .before = 1)%>%
-  mutate(across(where(is.numeric), ~ round(.x, 0)))
+  
+# Apply deltaMethod over each basin using map2_dfr
+df_subbasin <- map2_dfr(
+  subbasins$subbasin, subbasins$wq_value,
+  ~ deltaMethod(
+    object = coef_values,
+    vcov. = vcov_matrix,
+    g = paste0("-((mu_b_asc + mu_b_wq_local_basin*2 - (mu_b_wq_local_basin*", .y, "))/b_cost)")
+  ) %>%
+    mutate(basin = .x, subbasin = "all")
+)
 
 
-df_all <- rbind(df1,df2,df3,df4,df5,df6,df7,df8)
+df_basin <- df_basin%>%
+  select(Estimate,basin)%>%
+  rename(WTP_2 = Estimate)%>%
+  as.data.frame()
 
-# Example: use your dataframe, e.g., df_final
-ft <- flextable(df_all)
+df_basin_map <- df%>%
+  left_join(df_basin)
 
-# Create Word document
-doc <- read_docx() %>%
-  body_add_par("Model Output", style = "heading 1") %>%
-  body_add_flextable(ft)
-
-# Save to file
-print(doc, target = "Tables/WTP based on Model 5_1.docx")
+ab <- st_read("/Users/tharakajayalath/Library/CloudStorage/OneDrive-UniversityofSaskatchewan/Chapter III-UseNonUseValue/Survey/Shapefile/AB.shp")
+mb <- st_read("/Users/tharakajayalath/Library/CloudStorage/OneDrive-UniversityofSaskatchewan/Chapter III-UseNonUseValue/Survey/Shapefile/MB.shp")
+sk <- st_read("/Users/tharakajayalath/Library/CloudStorage/OneDrive-UniversityofSaskatchewan/Chapter III-UseNonUseValue/Survey/Shapefile/SK.shp")
 
 
-library(xtable)
+tm_shape(df_basin_map, crs = 3347)+
+  tm_fill(col = "WTP_2", palette = "YlGnBu", style = "cat", n = 16) +
+  tm_borders() +
+  tm_text("name_code", size = 0.8, col = "black", remove.overlap = TRUE)+  # Adjust size,
+  tm_shape(ab, crs = 3347) +
+  tm_borders(col = "black", lwd = 2)+
+  tm_shape(mb, crs = 3347) +
+  tm_borders(col = "black", lwd = 2)+
+  tm_shape(sk, crs = 3347) +
+  tm_borders(col = "black", lwd = 2)+ 
+  #tm_shape(ab_cities) +
+  #tm_borders(col = "black", lwd = 2)+
+  #tm_text("name", size = 0.6, col = "black", remove.overlap = TRUE)+  # Adjust size,
+  #tm_shape(mb_cities) +
+  #tm_borders(col = "black", lwd = 2)+
+  #tm_text("name", size = 0.6, col = "black", remove.overlap = TRUE)+  # Adjust size,
+  #tm_shape(sk_cities) +
+  #tm_borders(col = "black", lwd = 2)+ 
+  #tm_text("name", size = 0.6, col = "black", remove.overlap = TRUE)+  # Adjust size,
+  tm_layout(frame = FALSE)+
+  tm_legend(frame = F)
 
-# Example: Convert your dataframe to LaTeX
-latex_table <- xtable(df_all, caption = "Model Output")
 
-# Save as .tex file
-print(latex_table, file = "Tables/WTP based on Model 5_1.tex", include.rownames = FALSE)
+
+
+
+
+
+
+df_subbasin <- df_subbasin%>%
+  select(Estimate,basin)%>%
+  rename(name_code = basin)%>%
+  rename(WTP_2 = Estimate)%>%
+  as.data.frame()
+
+df_subbasin_map <- df%>%
+  left_join(df_subbasin)
+
+
+# Define custom breaks and palette
+custom_breaks <- c(500, 550, 600, 650, 700, 750, 800, 850, 900, 950)
+custom_palette <- RColorBrewer::brewer.pal(n = 9, name = "YlOrRd")  # 9 colors for 10 breaks
+
+# Plot
+tm_shape(df_subbasin_map, crs = 3347) +
+  tm_fill(col = "WTP_2", palette = "YlGnBu", style = "cat", n = 16)  +
+  tm_borders() +
+  tm_text("name_code", size = 0.8, col = "black", remove.overlap = TRUE) +
+  tm_shape(ab, crs = 3347) + tm_borders(col = "black", lwd = 2) +
+  tm_shape(mb, crs = 3347) + tm_borders(col = "black", lwd = 2) +
+  tm_shape(sk, crs = 3347) + tm_borders(col = "black", lwd = 2) +
+  tm_layout(frame = FALSE) +
+  tm_legend(frame = FALSE)
+
+
+
+
+
 
 
 

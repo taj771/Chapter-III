@@ -755,7 +755,214 @@ df_final <- df_final %>%
                                                              (PROVINCE == 12 & (PERC_AB > 0 | PERC_MB > 0) & PERC_SK == 0)), wq_sub_basin_policy,0 ))
 
 
-  
+
+
+################################################################################
+# Add area as % within their home province at given level of spatial schale of choice 
+
+basin <- read.csv("./Deriveddata/basin_level_shares_province.csv")%>%
+  mutate(CHOICE_BASIN = as.character(CHOICE_BASIN))
+
+sub_basin <- read.csv("./Deriveddata/sub_basin_level_shares_province.csv")
+
+df_temp1 <- df_final%>%
+  filter(CHOICE_AREA == "BASIN")%>%
+  left_join(basin, by = c("CHOICE_AREA","CHOICE_BASIN","PROVINCE"))
+
+
+df_temp2 <- df_final%>%
+  filter(CHOICE_AREA == "SUBBASIN")%>%
+  left_join(sub_basin, by = c("CHOICE_AREA","CHOICE_SUB_BASIN","PROVINCE"))
+
+
+df_final <- rbind(df_temp1, df_temp2) %>%
+  arrange(CaseId) %>%
+  mutate(HOME_PROV_SHARE = case_when(
+    PROVINCE == 1 ~ AB_SHARE,
+    PROVINCE == 3 ~ MB_SHARE,
+    PROVINCE == 12 ~ SK_SHARE,
+    TRUE ~ 0
+  ))%>%
+  mutate(HOME_PROV_SHARE = if_else(is.na(HOME_PROV_SHARE), 0, HOME_PROV_SHARE))
+
+
+
+###############################################################################
+# Dummy variable for shared boundary across
+
+df_final <- df_final %>%
+  mutate(SHARED_BOADER_PROV = case_when(
+    CHOICE_AREA == "BASIN" ~ 1,
+    SHARED_BOADER == 0 ~ 1,
+    TRUE ~ 0
+  ))
+
+
+###############################################################################
+# Rec trip during last two years - binary variables
+
+df_final <- df_final %>%
+  mutate(REC_TRIP = case_when(
+    Q21_REC_TRIP_TWO_YEARS == 1 ~ 1,
+    Q21_REC_TRIP_TWO_YEARS == 2 ~ 0,
+    is.na(Q21_REC_TRIP_TWO_YEARS) ~ NA_real_
+  ))
+
+###############################################################################
+
+# create dummy variable to local adjacent choices 
+
+df_map <- st_read("/Users/tharakajayalath/Library/CloudStorage/OneDrive-UniversityofSaskatchewan/Chapter III-UseNonUseValue/Survey/Shapefile/study_area_map_with_WQ.shp")
+
+library(spdep)
+
+# sub basin level
+# Convert to spatial object for neighbor analysis
+nb <- poly2nb(df_map)
+
+# Get the sub-basin names
+sub_basin_names <- df_map$name_code
+
+# Create a data frame with neighbor names
+neighbors_df <- data.frame(
+  Sub_Basin = sub_basin_names,
+  Neighbors = sapply(nb, function(x) paste(sub_basin_names[x], collapse = ", "))
+)%>%
+  mutate(Sub_Basin = case_when(
+    Sub_Basin == "AS" ~ 1,
+    Sub_Basin == "QU" ~ 2,
+    Sub_Basin == "RE" ~ 3,
+    Sub_Basin == "SO" ~ 4,
+    Sub_Basin == "ELW" ~ 5,
+    Sub_Basin == "GB" ~ 6,
+    Sub_Basin == "LWM" ~ 7,
+    Sub_Basin == "NE" ~ 8,
+    Sub_Basin == "SA" ~ 9,
+    Sub_Basin == "WLW" ~ 10,
+    Sub_Basin == "BA" ~ 11,
+    Sub_Basin == "CNS" ~ 12,
+    Sub_Basin == "LNS" ~ 13,
+    Sub_Basin == "UNS" ~ 14,
+    Sub_Basin == "BO" ~ 15,
+    Sub_Basin == "LSS" ~ 16,
+    Sub_Basin == "RD"~ 17,
+    Sub_Basin == "USS"~ 18,
+    TRUE ~ NA_real_
+  ))
+
+code_map <- c("AS" = 1L,"QU" = 2L,"RE" = 3L,"SO" = 4L,"ELW" = 5L,"GB" = 6L,"LWM" = 7L,"NE" = 8L,
+              "SA" = 9L,"WLW" = 10L,"BA" = 11L,"CNS" = 12L,"LNS" = 13L,"UNS" = 14L,"BO" = 15L,
+              "LSS" = 16L,"RD"= 17L,"USS"= 18L)
+
+
+# Apply transformation
+neighbors_df  <- neighbors_df  %>%
+  rowwise() %>%
+  mutate(code_num = list(
+    str_split(Neighbors, ",\\s*")[[1]] %>% 
+      map_chr(~ code_map[.x]) %>% 
+      paste(collapse = ", ")
+  )) %>%
+  ungroup()
+
+df_subbasin <- neighbors_df%>%
+  rename(CHOICE_SUB_BASIN=Sub_Basin,
+         NEIGHBOR = code_num)%>%
+  select(-Neighbors)
+
+
+
+# Basin level
+
+df_map_basin <- df_map %>%
+  group_by(basin) %>%
+  summarise(geometry = st_union(geometry)) %>%
+  ungroup()
+
+
+# Ensure the resulting geometries are valid again
+df_map_basin <- st_make_valid(df_map_basin)
+
+
+# Make sure you're using the same object to get both Basin_names and nb
+Basin_names <- df_map_basin$basin  # not df_map$basin
+
+# Create neighbor list
+nb <- poly2nb(df_map_basin)
+
+# Create the neighbor dataframe using the same names
+neighbors_df <- data.frame(
+  Basin = Basin_names,
+  Neighbors = sapply(nb, function(x) paste(Basin_names[x], collapse = ", "))
+)%>%
+  mutate(Basin = case_when(
+    Basin == "AR" ~ 1,
+    Basin == "LSN" ~ 2,
+    Basin == "NS" ~ 3,
+    Basin == "SS" ~ 4,
+    TRUE ~ NA_real_
+  ))
+
+code_map <- c("AR" = 1L,"LSN" = 2L,"NS" = 3L,"SS" = 4L)
+
+
+# Apply transformation
+neighbors_df  <- neighbors_df  %>%
+  rowwise() %>%
+  mutate(code_num = list(
+    str_split(Neighbors, ",\\s*")[[1]] %>% 
+      map_chr(~ code_map[.x]) %>% 
+      paste(collapse = ", ")
+  )) %>%
+  ungroup()
+
+df_basin <- neighbors_df%>%
+  rename(CHOICE_BASIN=Basin,
+         NEIGHBOR = code_num)%>%
+  select(-Neighbors)%>%
+  mutate(CHOICE_BASIN = as.character(CHOICE_BASIN))
+
+
+
+# sub basin
+df_temp_subbasin <- df_final%>%
+  #select(CaseId,SUB_BASIN,CHOICE_AREA,CHOICE_SUB_BASIN)%>%
+  filter(CHOICE_AREA == "SUBBASIN")%>%
+  left_join(df_subbasin )%>%
+  rowwise() %>%
+  mutate(
+    LOCAL_ADJUCENT = as.integer(
+      SUB_BASIN %in% str_split(NEIGHBOR, ",\\s*")[[1]]
+    )
+  ) %>%
+  ungroup()
+
+
+# basin
+df_temp_basin <- df_final%>%
+  #select(CaseId,BASIN,CHOICE_AREA,CHOICE_BASIN)%>%
+  filter(CHOICE_AREA == "BASIN")%>%
+  left_join(df_basin)%>%
+  rowwise() %>%
+  mutate(
+    LOCAL_ADJUCENT = as.integer(
+      BASIN %in% str_split(NEIGHBOR, ",\\s*")[[1]]
+    )
+  ) %>%
+  ungroup()
+
+
+
+
+df_final <- rbind(df_temp_subbasin,df_temp_basin)%>%
+  arrange(CaseId)
+
+
+
+
+
+###############################################################################
+
 # Reorder columns to allingn with the order of the survey
 
 df_final <- df_final[, c( "CaseId","CONDITION","TREATMENT","VERSION","BLK_NUMBER","CHOICE_NUMBER","BASIN","SUB_BASIN","NON_LOCAL",
@@ -763,6 +970,7 @@ df_final <- df_final[, c( "CaseId","CONDITION","TREATMENT","VERSION","BLK_NUMBER
                           "CHOICE_AREA","CHOICE_BASIN","CHOICE_SUB_BASIN","CHOICE_LOCALITY_BASIN","CHOICE_LOCALITY_SUBBASIN",
                           "POLICY_SIZE_KM","POLICY_SIZE_PERCENT","WQ_UP1","WQ_UP2","WQ_UP3","WQ_BY1",
                           "WQ_LOCAL_CURRENT","WQ_NL_CURRENT","WQ_LOCAL_POLICY","WQ_NL_POLICY",
+                          "SHARED_BOADER","SHARED_BOADER_PROV",
                           "WQ_HOME_CURRENT","WQ_HOME_POLICY",
                           "WQ_SUBBASIN_LOCAL_CURRENT","WQ_SUBBASIN_NL_CURRENT","WQ_SUBBASIN_LOCAL_POLICY","WQ_SUBBASIN_NL_POLICY",
                           "WQ_BASIN_LOCAL_CURRENT","WQ_BASIN_NL_CURRENT","WQ_BASIN_LOCAL_POLICY","WQ_BASIN_NL_POLICY",
@@ -778,6 +986,8 @@ df_final <- df_final[, c( "CaseId","CONDITION","TREATMENT","VERSION","BLK_NUMBER
                           "WQ_SUBBASIN_NL_NSB_LP_POLICY_SUBONLY","WQ_SUBBASIN_NL_SB_LP_POLICY_SUBONLY",
                           "WQ_SUBBASIN_NL_NSB_NLP_CURRENT_SUBONLY","WQ_SUBBASIN_NL_SB_NLP_CURRENT_SUBONLY",
                           "WQ_SUBBASIN_NL_NSB_NLP_POLICY_SUBONLY","WQ_SUBBASIN_NL_SB_NLP_POLICY_SUBONLY",
+                          
+                          "HOME_PROV_SHARE","LOCAL_ADJUCENT",
                           
                           "COST","VOTE",
                           "UID","PROVINCE", "AGE", "GENDER", "LANGUAGE", "INCOME", "POSTALCODE",
@@ -800,7 +1010,7 @@ df_final <- df_final[, c( "CaseId","CONDITION","TREATMENT","VERSION","BLK_NUMBER
                           "Q17_HUMAN_CAN_MODIFY","Q17_HUMAN_ABUSING","Q17_PLANTS_ANIMAL_RIGHT","Q17_NATURE_CAPABILITY",
                           "Q17_HUMAN_RULE","Q17_NATURE_DELICATE",
                           "Q18_CURRENT_LOCATION_STAY","Q19_MEMBER_OF_ENVIRON_ORG","Q20_WQ_CONSIDER_CURRENT_LIVING",
-                          "Q21_REC_TRIP_TWO_YEARS","Q22_DISTANCE_TRAVEL",
+                          "Q21_REC_TRIP_TWO_YEARS","REC_TRIP","Q22_DISTANCE_TRAVEL",
                           "Q23_FISHING","Q23_SWIMMING","Q23_CANNONING", "Q23_HUNTING", "Q23_OTHER",
                           "Q24_REC_TRIP_LAST_YEAR",
                           "Q25_WB1_NAME","Q25_WB2_NAME","Q25_WB3_NAME","Q25_WB4_NAME","Q25_WB5_NAME","Q25_WB1_WQ_LEVEL",

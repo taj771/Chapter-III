@@ -17,7 +17,7 @@ apollo_initialise()
 
 ### Set core controls
 apollo_control = list(
-  modelName       = "RPM Model 5_1",
+  modelName       = "RPM Model 1",
   modelDescr      = "Mixed-MNL",
   indivID         = "CaseId",  
   nCores          = 4,
@@ -234,140 +234,7 @@ model = apollo_estimate(apollo_beta, apollo_fixed,apollo_probabilities, apollo_i
 # Display model outputs
 apollo_modelOutput(model)
 
-# Extract coefficients and covariance matrix
-coef_values <- model$estimate
-vcov_matrix <- model$robvarcov
 
-
-# WTP for one unit improvement of WQ at Local Basin
-
-df1 <- deltaMethod(
-  object = coef_values, 
-  vcov. = vcov_matrix, 
-  g = "-(mu_b_asc + mu_b_wq_local_basin*(-1))/b_cost"
-)%>% 
-  {`rownames<-`(., NULL)}%>%
-  mutate(`WQ change scenario` = "Local Basin")%>%
-  relocate(`WQ change scenario`, .before = 1)%>%
-  mutate(across(where(is.numeric), ~ round(.x, 0)))
-
-
-# WTP for one unit improvement of WQ at Non-Local Basin
-
-df2 <- deltaMethod(
-  object = coef_values, 
-  vcov. = vcov_matrix, 
-  g = "-(mu_b_asc + mu_b_wq_nonlocal_basin*(-1))/b_cost"
-)%>% 
-  {`rownames<-`(., NULL)}%>%
-  mutate(`WQ change scenario` = "Non-Local Basin")%>%
-  relocate(`WQ change scenario`, .before = 1)%>%
-  mutate(across(where(is.numeric), ~ round(.x, 0)))
-
-
-
-# WTP for one unit improvement of WQ at Local Sub Basin - No Sharing Boundary
-
-df3 <- deltaMethod(
-  object = coef_values, 
-  vcov. = vcov_matrix, 
-  g = "-(mu_b_asc + mu_b_wq_sub_basin_local_nsb*(-1))/b_cost"
-)%>% 
-  {`rownames<-`(., NULL)}%>%
-  mutate(`WQ change scenario` = "Local Sub Basin - No Sharing Boundary")%>%
-  relocate(`WQ change scenario`, .before = 1)%>%
-  mutate(across(where(is.numeric), ~ round(.x, 0)))
-
-
-# WTP for one unit improvement of WQ at Local Sub Basin - Sharing Boundary
-
-df4 <- deltaMethod(
-  object = coef_values, 
-  vcov. = vcov_matrix, 
-  g = "-(mu_b_asc + mu_b_wq_sub_basin_local_sb *(-1))/b_cost"
-)%>% 
-  {`rownames<-`(., NULL)}%>%
-  mutate(`WQ change scenario` = "Local Sub Basin - Sharing Boundary")%>%
-  relocate(`WQ change scenario`, .before = 1)%>%
-  mutate(across(where(is.numeric), ~ round(.x, 0)))
-
-
-
-# WTP for one unit improvement of WQ at Non-local Sub Basin - within home Province & No Sharing Boundary
-
-df5 <- deltaMethod(
-  object = coef_values, 
-  vcov. = vcov_matrix, 
-  g = "-(mu_b_asc + mu_b_wq_sub_basin_nonlocal_nsb_local_prov *(-1))/b_cost"
-)%>% 
-  {`rownames<-`(., NULL)}%>%
-  mutate(`WQ change scenario` = "Non-local Sub Basin - within home Province & No Sharing Boundary")%>%
-  relocate(`WQ change scenario`, .before = 1)%>%
-  mutate(across(where(is.numeric), ~ round(.x, 0)))
-
-
-
-# WTP for one unit improvement of WQ at Non-local Sub Basin - within non-home Province & No Sharing Boundary
-
-df6 <- deltaMethod(
-  object = coef_values, 
-  vcov. = vcov_matrix, 
-  g = "-(mu_b_asc + mu_b_wq_sub_basin_nonlocal_nsb_nonlocal_prov  *(-1))/b_cost"
-)%>% 
-  {`rownames<-`(., NULL)}%>%
-  mutate(`WQ change scenario` = "Non-local Sub Basin - within non-home Province & No Sharing Boundary")%>%
-  relocate(`WQ change scenario`, .before = 1)%>%
-  mutate(across(where(is.numeric), ~ round(.x, 0)))
-
-
-
-# WTP for one unit improvement of WQ at Non-local Sub Basin within home Province & Sharing Boundary
-
-df7 <- deltaMethod(
-  object = coef_values, 
-  vcov. = vcov_matrix, 
-  g = "-(mu_b_asc + mu_b_wq_sub_basin_nonlocal_sb_local_prov*(-1))/b_cost"
-)%>% 
-  {`rownames<-`(., NULL)}%>%
-  mutate(`WQ change scenario` = "Non-local Sub Basin within home Province & Sharing Boundary")%>%
-  relocate(`WQ change scenario`, .before = 1)%>%
-  mutate(across(where(is.numeric), ~ round(.x, 0)))
-
-
-# WTP for one unit improvement of WQ at Non-local Sub Basin within non-home Province & Sharing Boundary
-
-df8 <- deltaMethod(
-  object = coef_values, 
-  vcov. = vcov_matrix, 
-  g = "-(mu_b_asc + mu_b_wq_sub_basin_nonlocal_sb_nonlocal_prov*(-1))/b_cost"
-) %>% 
-  {`rownames<-`(., NULL)}%>%
-  mutate(`WQ change scenario` = "Non-local Sub Basin within non-home Province & Sharing Boundary")%>%
-  relocate(`WQ change scenario`, .before = 1)%>%
-  mutate(across(where(is.numeric), ~ round(.x, 0)))
-
-
-df_all <- rbind(df1,df2,df3,df4,df5,df6,df7,df8)
-
-# Example: use your dataframe, e.g., df_final
-ft <- flextable(df_all)
-
-# Create Word document
-doc <- read_docx() %>%
-  body_add_par("Model Output", style = "heading 1") %>%
-  body_add_flextable(ft)
-
-# Save to file
-print(doc, target = "Tables/WTP based on Model 5_1.docx")
-
-
-library(xtable)
-
-# Example: Convert your dataframe to LaTeX
-latex_table <- xtable(df_all, caption = "Model Output")
-
-# Save as .tex file
-print(latex_table, file = "Tables/WTP based on Model 5_1.tex", include.rownames = FALSE)
-
-
+# Save model outputs
+apollo_saveOutput(model)
 
