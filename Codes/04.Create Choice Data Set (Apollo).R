@@ -783,7 +783,8 @@ df_final <- rbind(df_temp1, df_temp2) %>%
     PROVINCE == 12 ~ SK_SHARE,
     TRUE ~ 0
   ))%>%
-  mutate(HOME_PROV_SHARE = if_else(is.na(HOME_PROV_SHARE), 0, HOME_PROV_SHARE))
+  mutate(HOME_PROV_SHARE = if_else(is.na(HOME_PROV_SHARE), 0, HOME_PROV_SHARE))%>%
+  mutate(HOME_PROV_SHARE = HOME_PROV_SHARE/100)
 
 
 
@@ -958,15 +959,436 @@ df_final <- rbind(df_temp_subbasin,df_temp_basin)%>%
   arrange(CaseId)
 
 
+##############################################################################
 
+# Here we based in Q 25 and  deciede those recreational trips they have made rec trip
+# within their chice basin.sub basins. It is a binary variable that indicate if they 
+# made rec trip to during last year to tha water body within the choice basin and sub basin they
+# presented with the choice
+
+library(tidygeocoder)
+
+study_area <- st_read("/Users/tharakajayalath/Library/CloudStorage/OneDrive-UniversityofSaskatchewan/Chapter III-UseNonUseValue/Survey/Shapefile/study_area.shp")%>%
+  select(basin,WSCSDA_E)%>%
+  mutate(subbasin = case_when(
+    WSCSDA_E == "Qu'Appelle" ~ "QU", 
+    WSCSDA_E == "Assiniboine" ~ "AS", 
+    WSCSDA_E == "Souris" ~ "SO", 
+    WSCSDA_E == "Red" ~ "RE", 
+    
+    WSCSDA_E == "Grass and Burntwood River Basin" ~ "GB", 
+    WSCSDA_E == "Nelson River Basin" ~ "NE", 
+    WSCSDA_E == "Saskatchewan River Basin" ~ "SA", 
+    WSCSDA_E == "Eastern Lake Winnipeg River Basin" ~ "ELW", 
+    WSCSDA_E == "Lake Winnipegosis and Lake Manitoba River Basin" ~ "LWM", 
+    WSCSDA_E == "Western Lake Winnipeg River Basin" ~ "WLW", 
+    
+    WSCSDA_E == "Central North Saskatchewan Sub River Basin" ~ "CNS", 
+    WSCSDA_E == "Upper North Saskatchewan Sub River Basin" ~ "UNS", 
+    WSCSDA_E == "Battle Sub River Basin" ~ "BA", 
+    WSCSDA_E == "Lower North Saskatchewan Sub River Basin" ~ "LNS", 
+    
+    WSCSDA_E == "Bow Sub River Basin" ~ "BO", 
+    WSCSDA_E == "Red Deer Sub River Basin" ~ "RD", 
+    WSCSDA_E == "Lower South Saskatchewan Sub River Basin" ~ "LSS", 
+    WSCSDA_E == "Upper South Saskatchewan Sub River Basin" ~ "USS", 
+    
+    TRUE ~ NA_character_  # Otherwise, assign 0
+  ))%>%
+  select(-WSCSDA_E)%>%
+  mutate(sub_basin = case_when(
+    subbasin == "AS" ~ 1,
+    subbasin == "QU" ~ 2,
+    subbasin == "RE" ~ 3,
+    subbasin == "SO" ~ 4,
+    subbasin == "ELW" ~ 5,
+    subbasin == "GB" ~ 6,
+    subbasin == "LWM" ~ 7,
+    subbasin == "NE" ~ 8,
+    subbasin == "SA" ~ 9,
+    subbasin == "WLW" ~ 10,
+    subbasin == "BA" ~ 11,
+    subbasin == "CNS" ~ 12,
+    subbasin == "LNS" ~ 13,
+    subbasin == "UNS" ~ 14,
+    subbasin == "BO" ~ 15,
+    subbasin == "LSS" ~ 16,
+    subbasin == "RD"~ 17,
+    subbasin == "USS"~ 18,
+    TRUE ~ NA_real_
+  ))%>%
+  select(-subbasin)%>%
+  mutate(basin = case_when(
+    basin == "AR" ~ 1,
+    basin == "LSN" ~ 2,
+    basin == "NS" ~ 3,
+    basin == "SS" ~ 4,
+    TRUE ~ NA_real_
+  ))
+
+
+database <- read_csv("Deriveddata/processed_pilotdata_1_Apollo.csv")%>%
+  select(CaseId,Q24_REC_TRIP_LAST_YEAR,
+         Q25_WB1_NAME,Q25_WB2_NAME,Q25_WB3_NAME,Q25_WB4_NAME,Q25_WB5_NAME,
+         Q25_WB1_NEAR_TOWN,Q25_WB2_NEAR_TOWN,Q25_WB3_NEAR_TOWN,Q25_WB4_NEAR_TOWN,Q25_WB5_NEAR_TOWN)%>%
+  distinct(CaseId, .keep_all = T)%>%
+  filter(Q24_REC_TRIP_LAST_YEAR==1)
+
+
+#wb name1
+locations <- database%>%
+  select(CaseId,Q25_WB1_NAME)
+
+coords <- locations %>%
+  geocode(Q25_WB1_NAME, method = "osm")%>%  # or method = "google" with API key
+  drop_na(long,lat)
+
+coords <- st_as_sf(coords, coords = c("long", "lat"), crs = 4326)
+
+study_area <- st_transform(study_area, crs = st_crs(coords))
+
+
+basin_wb1 <- st_join(coords, study_area, join = st_within)%>%
+  filter(!is.na(sub_basin))%>%
+  rename(Q25_WB1_BASIN=basin,
+         Q25_WB1_SUBBASIN=sub_basin)%>%
+  as.data.frame()%>%
+  select(-geometry)
+
+
+
+#wb name2
+locations <- database%>%
+  select(CaseId,Q25_WB2_NAME)
+
+coords <- locations %>%
+  geocode(Q25_WB2_NAME, method = "osm")%>%  # or method = "google" with API key
+  drop_na(long,lat)
+
+coords <- st_as_sf(coords, coords = c("long", "lat"), crs = 4326)
+
+study_area <- st_transform(study_area, crs = st_crs(coords))
+
+
+basin_wb2 <- st_join(coords, study_area, join = st_within)%>%
+  filter(!is.na(sub_basin))%>%
+  rename(Q25_WB2_BASIN=basin,
+         Q25_WB2_SUBBASIN=sub_basin)%>%
+  as.data.frame()%>%
+  select(-geometry)
+
+#wb name3
+locations <- database%>%
+  select(CaseId,Q25_WB3_NAME)
+
+coords <- locations %>%
+  geocode(Q25_WB3_NAME, method = "osm")%>%  # or method = "google" with API key
+  drop_na(long,lat)
+
+coords <- st_as_sf(coords, coords = c("long", "lat"), crs = 4326)
+
+study_area <- st_transform(study_area, crs = st_crs(coords))
+
+
+basin_wb3 <- st_join(coords, study_area, join = st_within)%>%
+  filter(!is.na(sub_basin))%>%
+  rename(Q25_WB3_BASIN=basin,
+         Q25_WB3_SUBBASIN=sub_basin)%>%
+  as.data.frame()%>%
+  select(-geometry)
+
+
+#wb name4
+locations <- database%>%
+  select(CaseId,Q25_WB4_NAME)
+
+coords <- locations %>%
+  geocode(Q25_WB4_NAME, method = "osm")%>%  # or method = "google" with API key
+  drop_na(long,lat)
+
+coords <- st_as_sf(coords, coords = c("long", "lat"), crs = 4326)
+
+study_area <- st_transform(study_area, crs = st_crs(coords))
+
+
+basin_wb4 <- st_join(coords, study_area, join = st_within)%>%
+  filter(!is.na(sub_basin))%>%
+  rename(Q25_WB4_BASIN=basin,
+         Q25_WB4_SUBBASIN=sub_basin)%>%
+  as.data.frame()%>%
+  select(-geometry)
+
+
+#wb name5
+locations <- database%>%
+  select(CaseId,Q25_WB5_NAME)
+
+coords <- locations %>%
+  geocode(Q25_WB5_NAME, method = "osm")%>%  # or method = "google" with API key
+  drop_na(long,lat)
+
+coords <- st_as_sf(coords, coords = c("long", "lat"), crs = 4326)
+
+study_area <- st_transform(study_area, crs = st_crs(coords))
+
+
+basin_wb5 <- st_join(coords, study_area, join = st_within)%>%
+  filter(!is.na(sub_basin))%>%
+  rename(Q25_WB5_BASIN=basin,
+         Q25_WB5_SUBBASIN=sub_basin)%>%
+  as.data.frame()%>%
+  select(-geometry)
+
+
+
+database <- read_csv("Deriveddata/processed_pilotdata_1_Apollo.csv")%>%
+  select(CaseId,Q24_REC_TRIP_LAST_YEAR,
+         Q25_WB1_NAME,Q25_WB2_NAME,Q25_WB3_NAME,Q25_WB4_NAME,Q25_WB5_NAME,
+         Q25_WB1_NEAR_TOWN,Q25_WB2_NEAR_TOWN,Q25_WB3_NEAR_TOWN,Q25_WB4_NEAR_TOWN,Q25_WB5_NEAR_TOWN)%>%
+  distinct(CaseId, .keep_all = T)%>%
+  filter(Q24_REC_TRIP_LAST_YEAR==1)%>%
+  left_join(basin_wb1)%>%
+  left_join(basin_wb2)%>%
+  left_join(basin_wb3)%>%
+  left_join(basin_wb4)%>%
+  left_join(basin_wb5)
+
+
+
+#wb near town name1
+locations <- database%>%
+  select(CaseId,Q25_WB1_NEAR_TOWN)
+
+coords <- locations %>%
+  geocode(Q25_WB1_NEAR_TOWN, method = "osm")%>%  # or method = "google" with API key
+  drop_na(long,lat)
+
+coords <- st_as_sf(coords, coords = c("long", "lat"), crs = 4326)
+
+study_area <- st_transform(study_area, crs = st_crs(coords))
+
+
+basin_wb1 <- st_join(coords, study_area, join = st_within)%>%
+  filter(!is.na(sub_basin))%>%
+  rename(Q25_WB1_TOWN_BASIN=basin,
+         Q25_WB1_TOWN_SUBBASIN=sub_basin)%>%
+  as.data.frame()%>%
+  select(-geometry)
+
+
+
+#wb near town name2
+locations <- database%>%
+  select(CaseId,Q25_WB2_NEAR_TOWN)
+
+coords <- locations %>%
+  geocode(Q25_WB2_NEAR_TOWN, method = "osm")%>%  # or method = "google" with API key
+  drop_na(long,lat)
+
+coords <- st_as_sf(coords, coords = c("long", "lat"), crs = 4326)
+
+study_area <- st_transform(study_area, crs = st_crs(coords))
+
+
+basin_wb2 <- st_join(coords, study_area, join = st_within)%>%
+  filter(!is.na(sub_basin))%>%
+  rename(Q25_WB2_TOWN_BASIN=basin,
+         Q25_WB2_TOWN_SUBBASIN=sub_basin)%>%
+  as.data.frame()%>%
+  select(-geometry)
+
+#wb near town name3
+locations <- database%>%
+  select(CaseId,Q25_WB3_NEAR_TOWN)
+
+coords <- locations %>%
+  geocode(Q25_WB3_NEAR_TOWN, method = "osm")%>%  # or method = "google" with API key
+  drop_na(long,lat)
+
+coords <- st_as_sf(coords, coords = c("long", "lat"), crs = 4326)
+
+study_area <- st_transform(study_area, crs = st_crs(coords))
+
+
+basin_wb3 <- st_join(coords, study_area, join = st_within)%>%
+  filter(!is.na(sub_basin))%>%
+  rename(Q25_WB3_TOWN_BASIN=basin,
+         Q25_WB3_TOWN_SUBBASIN=sub_basin)%>%
+  as.data.frame()%>%
+  select(-geometry)
+
+
+#wb near town name4
+locations <- database%>%
+  select(CaseId,Q25_WB4_NEAR_TOWN)
+
+coords <- locations %>%
+  geocode(Q25_WB4_NEAR_TOWN, method = "osm")%>%  # or method = "google" with API key
+  drop_na(long,lat)
+
+coords <- st_as_sf(coords, coords = c("long", "lat"), crs = 4326)
+
+study_area <- st_transform(study_area, crs = st_crs(coords))
+
+
+basin_wb4 <- st_join(coords, study_area, join = st_within)%>%
+  filter(!is.na(sub_basin))%>%
+  rename(Q25_WB4_TOWN_BASIN=basin,
+         Q25_WB4_TOWN_SUBBASIN=sub_basin)%>%
+  as.data.frame()%>%
+  select(-geometry)
+
+
+#wb near town name5
+locations <- database%>%
+  select(CaseId,Q25_WB5_NEAR_TOWN)
+
+coords <- locations %>%
+  geocode(Q25_WB5_NEAR_TOWN, method = "osm")%>%  # or method = "google" with API key
+  drop_na(long,lat)
+
+coords <- st_as_sf(coords, coords = c("long", "lat"), crs = 4326)
+
+study_area <- st_transform(study_area, crs = st_crs(coords))
+
+
+basin_wb5 <- st_join(coords, study_area, join = st_within)%>%
+  filter(!is.na(sub_basin))%>%
+  rename(Q25_WB5_TOWN_BASIN=basin,
+         Q25_WB5_TOWN_SUBBASIN=sub_basin)%>%
+  as.data.frame()%>%
+  select(-geometry)
+
+
+
+df_rec_trips <- database%>%
+  left_join(basin_wb1)%>%
+  left_join(basin_wb2)%>%
+  left_join(basin_wb3)%>%
+  left_join(basin_wb4)%>%
+  left_join(basin_wb5)%>%
+  mutate(
+    REC_SUBBASIN_TRIP1 = case_when(
+      is.na(Q25_WB1_SUBBASIN) & is.na(Q25_WB1_TOWN_SUBBASIN) ~ NA_character_,
+      is.na(Q25_WB1_SUBBASIN) ~ as.character(Q25_WB1_TOWN_SUBBASIN),
+      is.na(Q25_WB1_TOWN_SUBBASIN) ~ as.character(Q25_WB1_SUBBASIN),
+      TRUE ~ paste(
+        as.character(Q25_WB1_SUBBASIN),
+        as.character(Q25_WB1_TOWN_SUBBASIN),
+        sep = ", ")))%>%
+  mutate(
+    REC_SUBBASIN_TRIP2 = case_when(
+      is.na(Q25_WB2_SUBBASIN) & is.na(Q25_WB2_TOWN_SUBBASIN) ~ NA_character_,
+      is.na(Q25_WB2_SUBBASIN) ~ as.character(Q25_WB2_TOWN_SUBBASIN),
+      is.na(Q25_WB2_TOWN_SUBBASIN) ~ as.character(Q25_WB2_SUBBASIN),
+      TRUE ~ paste(
+        as.character(Q25_WB2_SUBBASIN),
+        as.character(Q25_WB2_TOWN_SUBBASIN),
+        sep = ", ")))%>%
+  mutate(
+    REC_SUBBASIN_TRIP3 = case_when(
+      is.na(Q25_WB3_SUBBASIN) & is.na(Q25_WB3_TOWN_SUBBASIN) ~ NA_character_,
+      is.na(Q25_WB3_SUBBASIN) ~ as.character(Q25_WB3_TOWN_SUBBASIN),
+      is.na(Q25_WB3_TOWN_SUBBASIN) ~ as.character(Q25_WB3_SUBBASIN),
+      TRUE ~ paste(
+        as.character(Q25_WB3_SUBBASIN),
+        as.character(Q25_WB3_TOWN_SUBBASIN),
+        sep = ", ")))%>%
+  mutate(
+    REC_SUBBASIN_TRIP4 = case_when(
+      is.na(Q25_WB4_SUBBASIN) & is.na(Q25_WB4_TOWN_SUBBASIN) ~ NA_character_,
+      is.na(Q25_WB4_SUBBASIN) ~ as.character(Q25_WB4_TOWN_SUBBASIN),
+      is.na(Q25_WB4_TOWN_SUBBASIN) ~ as.character(Q25_WB4_SUBBASIN),
+      TRUE ~ paste(
+        as.character(Q25_WB4_SUBBASIN),
+        as.character(Q25_WB4_TOWN_SUBBASIN),
+        sep = ", ")))%>%
+  mutate(
+    REC_SUBBASIN_TRIP5 = case_when(
+      is.na(Q25_WB5_SUBBASIN) & is.na(Q25_WB5_TOWN_SUBBASIN) ~ NA_character_,
+      is.na(Q25_WB5_SUBBASIN) ~ as.character(Q25_WB5_TOWN_SUBBASIN),
+      is.na(Q25_WB5_TOWN_SUBBASIN) ~ as.character(Q25_WB5_SUBBASIN),
+      TRUE ~ paste(
+        as.character(Q25_WB5_SUBBASIN),
+        as.character(Q25_WB5_TOWN_SUBBASIN),
+        sep = ", ")))%>%
+  select(CaseId,REC_SUBBASIN_TRIP1,REC_SUBBASIN_TRIP2,REC_SUBBASIN_TRIP3,REC_SUBBASIN_TRIP4,REC_SUBBASIN_TRIP5,
+         Q25_WB1_BASIN,Q25_WB2_BASIN,Q25_WB3_BASIN,Q25_WB4_BASIN,Q25_WB5_BASIN)%>%
+  mutate(CaseId = as.character(CaseId))
+
+
+#write_csv(df_rec_trips,"./Deriveddata/RecTrip_basininfo.csv")
+
+df_temp_basin <- df_final%>%
+  filter(CHOICE_AREA == "BASIN")%>%
+  left_join(df_rec_trips)%>%
+  rowwise() %>%
+  mutate(
+    REC_IN_CHOICE_BASIN = any(
+      str_split(Q25_WB1_BASIN, ",\\s*")[[1]] == CHOICE_BASIN,
+      str_split(Q25_WB2_BASIN, ",\\s*")[[1]] == CHOICE_BASIN,
+      str_split(Q25_WB3_BASIN, ",\\s*")[[1]] == CHOICE_BASIN,
+      str_split(Q25_WB4_BASIN, ",\\s*")[[1]] == CHOICE_BASIN,
+      str_split(Q25_WB5_BASIN, ",\\s*")[[1]] == CHOICE_BASIN
+    ) %>% as.integer()
+  ) %>%
+  ungroup()
+
+df_temp_subbasin <- df_final%>%
+  filter(CHOICE_AREA == "SUBBASIN")%>%
+  left_join(df_rec_trips)%>%
+  rowwise() %>%
+  mutate(
+    REC_IN_CHOICE_BASIN = any(
+      str_split(REC_SUBBASIN_TRIP1, ",\\s*")[[1]] == CHOICE_SUB_BASIN,
+      str_split(REC_SUBBASIN_TRIP2, ",\\s*")[[1]] == CHOICE_SUB_BASIN,
+      str_split(REC_SUBBASIN_TRIP3, ",\\s*")[[1]] == CHOICE_SUB_BASIN,
+      str_split(REC_SUBBASIN_TRIP4, ",\\s*")[[1]] == CHOICE_SUB_BASIN,
+      str_split(REC_SUBBASIN_TRIP5, ",\\s*")[[1]] == CHOICE_SUB_BASIN
+    ) %>% as.integer()
+  ) %>%
+  ungroup()
+
+df_final <- rbind(df_temp_basin,df_temp_subbasin)%>%
+  mutate(REC_IN_CHOICE_BASIN = if_else(is.na(REC_IN_CHOICE_BASIN), 0, REC_IN_CHOICE_BASIN))%>%
+  arrange(CaseId)
 
 
 ###############################################################################
+# create dummy variable for version 1 and version 2
+
+df_final <- df_final %>%
+  mutate(
+    SURVEY_VERSION_1 = ifelse(VERSION %in% c(1, 2), 1, 0),
+    SURVEY_VERSION_2 = ifelse(VERSION %in% c(3, 4), 1, 0)
+  )%>%
+  mutate(
+    VERSION_1 = ifelse(VERSION == 1, 1, 0),
+    VERSION_2 = ifelse(VERSION == 2, 1, 0),
+    VERSION_3 = ifelse(VERSION == 3, 1, 0),
+    VERSION_4 = ifelse(VERSION == 4, 1, 0)
+  )
+
+###############################################################################
+# Create variable to determine the how much WQ level has change (to use in version effect assessment)
+# create interaction term of baseline_WQ*change WQ
+
+df_final <- df_final%>%
+  mutate(WQ_CHANGE = ifelse(CHOICE_AREA == "BASIN", CURRENT_AVERAGE - POLICY_AVERAGE, NA)) %>%
+  mutate(WQ_CHANGE = ifelse(CHOICE_AREA == "SUBBASIN", wq_sub_basin_current - wq_sub_basin_policy, WQ_CHANGE))%>%
+  mutate(BASELINE_X_WQCHANGE = ifelse(CHOICE_AREA == "BASIN", WQ_CHANGE*CURRENT_AVERAGE, NA))%>%
+  mutate(BASELINE_X_WQCHANGE = ifelse(CHOICE_AREA == "SUBBASIN", WQ_CHANGE*wq_sub_basin_current,BASELINE_X_WQCHANGE ))
+
+
+
+
+################################################################################
 
 # Reorder columns to allingn with the order of the survey
 
-df_final <- df_final[, c( "CaseId","CONDITION","TREATMENT","VERSION","BLK_NUMBER","CHOICE_NUMBER","BASIN","SUB_BASIN","NON_LOCAL",
-                          "IMAGECURRENT","IMAGEPOLICY","CURRENT_AVERAGE","POLICY_AVERAGE",
+df_final <- df_final[, c( "CaseId","CONDITION","TREATMENT","VERSION","SURVEY_VERSION_1","SURVEY_VERSION_2", "VERSION_1", "VERSION_2", "VERSION_3", "VERSION_4",
+                          "BLK_NUMBER","CHOICE_NUMBER","BASIN","SUB_BASIN","NON_LOCAL",
+                          "IMAGECURRENT","IMAGEPOLICY","CURRENT_AVERAGE","POLICY_AVERAGE","WQ_CHANGE", "BASELINE_X_WQCHANGE",
                           "CHOICE_AREA","CHOICE_BASIN","CHOICE_SUB_BASIN","CHOICE_LOCALITY_BASIN","CHOICE_LOCALITY_SUBBASIN",
                           "POLICY_SIZE_KM","POLICY_SIZE_PERCENT","WQ_UP1","WQ_UP2","WQ_UP3","WQ_BY1",
                           "WQ_LOCAL_CURRENT","WQ_NL_CURRENT","WQ_LOCAL_POLICY","WQ_NL_POLICY",
@@ -1010,7 +1432,7 @@ df_final <- df_final[, c( "CaseId","CONDITION","TREATMENT","VERSION","BLK_NUMBER
                           "Q17_HUMAN_CAN_MODIFY","Q17_HUMAN_ABUSING","Q17_PLANTS_ANIMAL_RIGHT","Q17_NATURE_CAPABILITY",
                           "Q17_HUMAN_RULE","Q17_NATURE_DELICATE",
                           "Q18_CURRENT_LOCATION_STAY","Q19_MEMBER_OF_ENVIRON_ORG","Q20_WQ_CONSIDER_CURRENT_LIVING",
-                          "Q21_REC_TRIP_TWO_YEARS","REC_TRIP","Q22_DISTANCE_TRAVEL",
+                          "Q21_REC_TRIP_TWO_YEARS","REC_TRIP","REC_IN_CHOICE_BASIN","Q22_DISTANCE_TRAVEL",
                           "Q23_FISHING","Q23_SWIMMING","Q23_CANNONING", "Q23_HUNTING", "Q23_OTHER",
                           "Q24_REC_TRIP_LAST_YEAR",
                           "Q25_WB1_NAME","Q25_WB2_NAME","Q25_WB3_NAME","Q25_WB4_NAME","Q25_WB5_NAME","Q25_WB1_WQ_LEVEL",

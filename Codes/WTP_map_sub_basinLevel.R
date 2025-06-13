@@ -447,6 +447,19 @@ mb <- st_read("/Users/tharakajayalath/Library/CloudStorage/OneDrive-Universityof
 sk <- st_read("/Users/tharakajayalath/Library/CloudStorage/OneDrive-UniversityofSaskatchewan/Chapter III-UseNonUseValue/Survey/Shapefile/SK.shp")
 
 
+library(tidygeocoder)
+
+# Example data frame with city names
+cities <- data.frame(city = c("Grand Prairie","Slave Lake","Fort McMurray","Edson","Edmonton","Red Deer","Banf","Calgary","Brooks","Drumheller","Brooks",
+                              "Cold lake","North Battleford", "Medicine Hat", "Moose Jaw","Saskatoon","Regina","Prince Albert", "Fort Qu'Apelle",
+                              "Swan River", "The pas", "Split Lake", "Cross Lake", "Oxford House", "Altona", "Stonewall", "Minnedosa"))
+
+# Geocode using OSM (default)
+geocoded_cities <- cities %>%
+  geocode(address = city, method = "osm", lat = latitude, long = longitude)
+
+# Convert to sf object (spatial point)
+cities <- st_as_sf(geocoded_cities, coords = c("longitude", "latitude"), crs = 4326)
 
 
 # Get the number of unique values in WTP_2
@@ -456,14 +469,16 @@ n_colors <- length(unique(df_map$WTP_2))
 library(viridis)
 custom_palette <- viridis(n_colors, option = "I")
 
-tm_shape(df_map, crs = 3347)+
+
+
+value_map <- tm_shape(df_map, crs = 3347)+
   tm_fill(    col = "WTP_2",
               palette = custom_palette,
               style = "cat",
-              title = "WTP_2"
+              title = "Willingness to Pay ($)"
   ) +
   tm_borders() +
-  tm_text("name_code", size = 0.8, col = "black", remove.overlap = TRUE)+  # Adjust size,
+  #tm_text("name_code", size = 0.8, col = "black", remove.overlap = TRUE)+  # Adjust size,
   tm_shape(ab, crs = 3347) +
   tm_borders(col = "black", lwd = 2)+
   tm_shape(mb, crs = 3347) +
@@ -480,6 +495,25 @@ tm_shape(df_map, crs = 3347)+
   #tm_borders(col = "black", lwd = 2)+ 
   #tm_text("name", size = 0.6, col = "black", remove.overlap = TRUE)+  # Adjust size,
   tm_layout(frame = FALSE)+
+  tm_scale_bar(
+    breaks = c(0, 100, 200,300,400),       # custom distance labels
+    text.size = 0.5,               # smaller text
+    position = c(0.6, 0.008),       # custom position
+    color.dark = "black",          # tick and text color
+    color.light = "white"          # fill for alternating blocks
+  ) +
+  tm_compass(
+    type = "arrow",              # options: "arrow", "8star", "radar"
+    size = 2,                    # size of the compass
+    position = c(0.9, 0.9)       # custom position (x, y: 0 to 1 scale)
+  )+
+  
+  tm_shape(cities) +
+  tm_symbols(col = "blue", size = 0.1) +
+  tm_text("city", size = 0.7, col = "black",ymod = -0.5)+
+  
   tm_legend(frame = F)
 
+# Save to PNG
+tmap_save(value_map, "Figures/value_map.png", width = 10, height = 8, units = "in", dpi = 300)
 

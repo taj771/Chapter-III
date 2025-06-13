@@ -1,5 +1,5 @@
 ########################################################################################
-# Description: RPM Model 3
+# Description: RPM Model 4
 #######################################################################################
 
 
@@ -17,7 +17,7 @@ apollo_initialise()
 
 ### Set core controls
 apollo_control = list(
-  modelName       = "Model 3",
+  modelName       = "Model 4",
   modelDescr      = "Mixed-MNL",
   indivID         = "CaseId",  
   nCores          = 8,
@@ -74,6 +74,11 @@ apollo_beta = c(
   b_asc_rectrip_choice = 0,
   #sigma_b_asc_rectrip_choice = 0,
   
+  #b_asc_version1 = 0,
+  b_asc_version2 = 0,
+  b_asc_version3 = 0,
+  b_asc_version4 = 0,
+  
   b_cost  = 0,  
   
   mu_b_wq_local_basin = 0,
@@ -109,6 +114,7 @@ apollo_draws = list(
                      "draws_asc_local_adjacent",
                      #"draws_asc_rectrip",
                      #"draws_asc_rectrip_choice",
+                     #"draws_asc_version",
                      "draws_wq_local_basin","draws_wq_nonlocal_basin",
                      "draws_wq_local_sub_basin","draws_wq_nonlocal_sub_basin"),
   intraDrawsType = "halton",
@@ -133,6 +139,8 @@ apollo_randCoeff = function(apollo_beta, apollo_inputs){
   #randcoeff[["b_asc_rectrip"]] = mu_b_asc_rectrip + sigma_b_asc_rectrip*draws_asc_rectrip 
   
   #randcoeff[["b_asc_rectrip_choice"]] = mu_b_asc_rectrip_choice + sigma_b_asc_rectrip_choice*draws_asc_rectrip_choice 
+  
+  #randcoeff[["b_asc_version1"]] = mu_b_asc_version1 + sigma_b_asc_version1*draws_asc_version 
   
   randcoeff[["b_wq_local_basin"]] =  mu_b_wq_local_basin + sigma_b_wq_local_basin*draws_wq_local_basin
   randcoeff[["b_wq_nonlocal_basin"]] =  mu_b_wq_nonlocal_basin + sigma_b_wq_nonlocal_basin*draws_wq_nonlocal_basin
@@ -167,6 +175,12 @@ apollo_probabilities = function(apollo_beta, apollo_inputs, functionality = "est
     b_asc_local_adjacent*LOCAL_ADJUCENT +
     b_asc_rectrip*REC_TRIP +
     b_asc_rectrip_choice*REC_IN_CHOICE_BASIN +
+    
+    #b_asc_version1*SURVEY_VERSION_1 +
+    b_asc_version2*VERSION_2 +
+    b_asc_version3*VERSION_3 +
+    b_asc_version4*VERSION_4 +
+    
     b_cost *COST + 
     b_wq_local_basin*WQ_BASIN_LOCAL_POLICY +
     b_wq_nonlocal_basin*WQ_BASIN_NL_POLICY +
