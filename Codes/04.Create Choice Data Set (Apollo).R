@@ -542,6 +542,28 @@ df_final <- df_all%>%
   
 
 
+
+
+################################################################################
+# For the sub-basin level changes we use basin level average, but we may need to 
+# use sub basin level changes instead of basin level so here we add WQ level 
+# for current and policy for choices with sub-basin level
+# added ob May 6 and if this is process ahead can incorporate those changes
+
+df_final <- df_final %>%
+  mutate(
+    wq_sub_basin_current = ifelse(CHOICE_AREA == "SUBBASIN", as.numeric(gsub("[^0-9]", "", IMAGECURRENT)), 0),
+    wq_sub_basin_policy = ifelse(CHOICE_AREA == "SUBBASIN", as.numeric(gsub("[^0-9]", "", IMAGEPOLICY)), 0)
+  ) %>%
+  
+  mutate(
+    WQ_SUBBASIN_LOCAL_CURRENT_SUBONLY = if_else(CHOICE_AREA == "SUBBASIN" & CHOICE_LOCALITY_SUBBASIN == "LOCAL",wq_sub_basin_current,0),
+    WQ_SUBBASIN_NL_CURRENT_SUBONLY = if_else(CHOICE_AREA == "SUBBASIN" & CHOICE_LOCALITY_SUBBASIN == "NONLOCAL", wq_sub_basin_current,0),
+    WQ_SUBBASIN_LOCAL_POLICY_SUBONLY = if_else(CHOICE_AREA == "SUBBASIN" & CHOICE_LOCALITY_SUBBASIN == "LOCAL", wq_sub_basin_policy,0),
+    WQ_SUBBASIN_NL_POLICY_SUBONLY = if_else(CHOICE_AREA == "SUBBASIN" & CHOICE_LOCALITY_SUBBASIN == "NONLOCAL", wq_sub_basin_policy,0)
+  )
+  
+
 ################################################################################
 # To address the distance decaying effects, we add few more variables based on the
 # provinces and whether sub basins are share across the province
@@ -647,132 +669,88 @@ df<- df%>%
 
 df_final <- df_final%>%
   left_join(df)%>%
-  mutate(WQ_SUBBASIN_LOCAL_NSB_CURRENT =  if_else(CHOICE_AREA == "SUBBASIN" & CHOICE_LOCALITY_SUBBASIN == "LOCAL" & 
-                                                    SHARED_BOADER == 1 ,CURRENT_AVERAGE,0))%>%
+  
   mutate(WQ_SUBBASIN_LOCAL_SB_CURRENT =  if_else(CHOICE_AREA == "SUBBASIN" & CHOICE_LOCALITY_SUBBASIN == "LOCAL" & 
-                                                   SHARED_BOADER == 0 ,CURRENT_AVERAGE,0))%>%
-  mutate(WQ_SUBBASIN_LOCAL_NSB_POLICY =  if_else(CHOICE_AREA == "SUBBASIN" & CHOICE_LOCALITY_SUBBASIN == "LOCAL" & 
-                                                   SHARED_BOADER == 1 ,POLICY_AVERAGE,0))%>%
+                                                   SHARED_BOADER == 0 ,wq_sub_basin_current,0))%>%
+  mutate(WQ_SUBBASIN_LOCAL_NSB_CURRENT =  if_else(CHOICE_AREA == "SUBBASIN" & CHOICE_LOCALITY_SUBBASIN == "LOCAL" & 
+                                                    SHARED_BOADER == 1 ,wq_sub_basin_current,0))%>%
+  
+  
   mutate(WQ_SUBBASIN_LOCAL_SB_POLICY =  if_else(CHOICE_AREA == "SUBBASIN" & CHOICE_LOCALITY_SUBBASIN == "LOCAL" & 
-                                                  SHARED_BOADER == 0 ,POLICY_AVERAGE,0))%>%
+                                                  SHARED_BOADER == 0 ,wq_sub_basin_policy,0))%>%
+  mutate(WQ_SUBBASIN_LOCAL_NSB_POLICY =  if_else(CHOICE_AREA == "SUBBASIN" & CHOICE_LOCALITY_SUBBASIN == "LOCAL" & 
+                                                   SHARED_BOADER == 1 ,wq_sub_basin_policy,0))%>%
   
-  mutate(WQ_SUBBASIN_NL_NSB_LP_CURRENT = if_else(CHOICE_AREA == "SUBBASIN" &  CHOICE_LOCALITY_SUBBASIN == "NONLOCAL" & SHARED_BOADER == 1 & 
-                                                   ((PROVINCE == 1 & PERC_AB > 0) | (PROVINCE == 3 & PERC_MB > 0) | (PROVINCE == 12 & PERC_SK > 0)),
-                                                 CURRENT_AVERAGE,0 ))%>%
-  mutate(WQ_SUBBASIN_NL_SB_LP_CURRENT = if_else(CHOICE_AREA == "SUBBASIN" &  CHOICE_LOCALITY_SUBBASIN == "NONLOCAL" & SHARED_BOADER == 0 & 
-                                                  ((PROVINCE == 1 & PERC_AB > 0) | (PROVINCE == 3 & PERC_MB > 0) | (PROVINCE == 12 & PERC_SK > 0)),
-                                                CURRENT_AVERAGE,0 ))%>%
   
-  mutate(WQ_SUBBASIN_NL_NSB_LP_POLICY = if_else(CHOICE_AREA == "SUBBASIN" &  CHOICE_LOCALITY_SUBBASIN == "NONLOCAL" & SHARED_BOADER == 1 & 
-                                                  ((PROVINCE == 1 & PERC_AB > 0) | (PROVINCE == 3 & PERC_MB > 0) | (PROVINCE == 12 & PERC_SK > 0)),
-                                                POLICY_AVERAGE,0 ))%>%
-  mutate(WQ_SUBBASIN_NL_SB_LP_POLICY = if_else(CHOICE_AREA == "SUBBASIN" &  CHOICE_LOCALITY_SUBBASIN == "NONLOCAL" & SHARED_BOADER == 0 & 
-                                                 ((PROVINCE == 1 & PERC_AB > 0) | (PROVINCE == 3 & PERC_MB > 0) | (PROVINCE == 12 & PERC_SK > 0)),
-                                               POLICY_AVERAGE,0 ))%>%
+  mutate(WQ_SUBBASIN_NONLOCAL_SB_CURRENT =  if_else(CHOICE_AREA == "SUBBASIN" & CHOICE_LOCALITY_SUBBASIN == "NONLOCAL" & 
+                                                      SHARED_BOADER == 0 ,wq_sub_basin_current,0))%>%
+  mutate(WQ_SUBBASIN_NONLOCAL_NSB_CURRENT =  if_else(CHOICE_AREA == "SUBBASIN" & CHOICE_LOCALITY_SUBBASIN == "NONLOCAL" & 
+                                                       SHARED_BOADER == 1 ,wq_sub_basin_current,0))%>%
   
-  mutate(WQ_SUBBASIN_NL_NSB_NLP_CURRENT = if_else(CHOICE_AREA == "SUBBASIN" & CHOICE_LOCALITY_SUBBASIN == "NONLOCAL" & SHARED_BOADER == 1 &
-                                                    ((PROVINCE == 1 & (PERC_MB > 0 | PERC_SK > 0) & PERC_AB == 0) |
-                                                       (PROVINCE == 3 & (PERC_AB > 0 | PERC_SK > 0) & PERC_MB == 0) |
-                                                       (PROVINCE == 12 & (PERC_AB > 0 | PERC_MB > 0) & PERC_SK == 0)), CURRENT_AVERAGE,0 )) %>%
-  mutate(WQ_SUBBASIN_NL_SB_NLP_CURRENT = if_else(CHOICE_AREA == "SUBBASIN" & CHOICE_LOCALITY_SUBBASIN == "NONLOCAL" & SHARED_BOADER == 0 &
-                                                   ((PROVINCE == 1 & (PERC_MB > 0 | PERC_SK > 0) & PERC_AB == 0) |
-                                                      (PROVINCE == 3 & (PERC_AB > 0 | PERC_SK > 0) & PERC_MB == 0) |
-                                                      (PROVINCE == 12 & (PERC_AB > 0 | PERC_MB > 0) & PERC_SK == 0)), CURRENT_AVERAGE,0 ))%>%
   
-  mutate(WQ_SUBBASIN_NL_NSB_NLP_POLICY = if_else(CHOICE_AREA == "SUBBASIN" & CHOICE_LOCALITY_SUBBASIN == "NONLOCAL" & SHARED_BOADER == 1 &
-                                                   ((PROVINCE == 1 & (PERC_MB > 0 | PERC_SK > 0) & PERC_AB == 0) |
-                                                      (PROVINCE == 3 & (PERC_AB > 0 | PERC_SK > 0) & PERC_MB == 0) |
-                                                      (PROVINCE == 12 & (PERC_AB > 0 | PERC_MB > 0) & PERC_SK == 0)), POLICY_AVERAGE,0 )) %>%
-  mutate(WQ_SUBBASIN_NL_SB_NLP_POLICY = if_else(CHOICE_AREA == "SUBBASIN" & CHOICE_LOCALITY_SUBBASIN == "NONLOCAL" & SHARED_BOADER == 0 &
-                                                  ((PROVINCE == 1 & (PERC_MB > 0 | PERC_SK > 0) & PERC_AB == 0) |
-                                                     (PROVINCE == 3 & (PERC_AB > 0 | PERC_SK > 0) & PERC_MB == 0) |
-                                                     (PROVINCE == 12 & (PERC_AB > 0 | PERC_MB > 0) & PERC_SK == 0)), POLICY_AVERAGE,0 ))
-
-
-
-
-
-################################################################################
-# For the sub-basin level changes we use basin level average, but we may need to 
-# use sub basin level changes instead of basin level so here we add WQ level 
-# for current and policy for choices with sub-basin level
-# added ob May 6 and if this is process ahead can incorporate those changes
-
-df_final <- df_final %>%
-  mutate(
-    wq_sub_basin_current = ifelse(CHOICE_AREA == "SUBBASIN", as.numeric(gsub("[^0-9]", "", IMAGECURRENT)), 0),
-    wq_sub_basin_policy = ifelse(CHOICE_AREA == "SUBBASIN", as.numeric(gsub("[^0-9]", "", IMAGEPOLICY)), 0)
-  ) %>%
+  mutate(WQ_SUBBASIN_NONLOCAL_SB_POLICY =  if_else(CHOICE_AREA == "SUBBASIN" & CHOICE_LOCALITY_SUBBASIN == "NONLOCAL" & 
+                                                     SHARED_BOADER == 0 ,wq_sub_basin_policy,0))%>%
+  mutate(WQ_SUBBASIN_NONLOCAL_NSB_POLICY =  if_else(CHOICE_AREA == "SUBBASIN" & CHOICE_LOCALITY_SUBBASIN == "NONLOCAL" & 
+                                                      SHARED_BOADER == 1 ,wq_sub_basin_policy,0))%>%
   
-  mutate(
-    WQ_SUBBASIN_LOCAL_CURRENT_SUBONLY = if_else(CHOICE_AREA == "SUBBASIN" & CHOICE_LOCALITY_SUBBASIN == "LOCAL",wq_sub_basin_current,0),
-    WQ_SUBBASIN_NL_CURRENT_SUBONLY = if_else(CHOICE_AREA == "SUBBASIN" & CHOICE_LOCALITY_SUBBASIN == "NONLOCAL", wq_sub_basin_current,0),
-    WQ_SUBBASIN_LOCAL_POLICY_SUBONLY = if_else(CHOICE_AREA == "SUBBASIN" & CHOICE_LOCALITY_SUBBASIN == "LOCAL", wq_sub_basin_policy,0),
-    WQ_SUBBASIN_NL_POLICY_SUBONLY = if_else(CHOICE_AREA == "SUBBASIN" & CHOICE_LOCALITY_SUBBASIN == "NONLOCAL", wq_sub_basin_policy,0)
-  )%>%
+  
+  mutate(WQ_SUBBASIN_LOCAL_SB_LP_CURRENT = if_else(CHOICE_AREA == "SUBBASIN" &  CHOICE_LOCALITY_SUBBASIN == "LOCAL" & SHARED_BOADER == 0 & 
+                                                     ((PROVINCE == 1 & PERC_AB > 0) | (PROVINCE == 3 & PERC_MB > 0) | (PROVINCE == 12 & PERC_SK > 0)),
+                                                   CURRENT_AVERAGE,0 ))%>%
+  
+  mutate(WQ_SUBBASIN_LOCAL_NSB_LP_CURRENT = if_else(CHOICE_AREA == "SUBBASIN" &  CHOICE_LOCALITY_SUBBASIN == "LOCAL" & SHARED_BOADER == 1 & 
+                                                      ((PROVINCE == 1 & PERC_AB > 0) | (PROVINCE == 3 & PERC_MB > 0) | (PROVINCE == 12 & PERC_SK > 0)),
+                                                    CURRENT_AVERAGE,0 ))%>%
+  
+  mutate(WQ_SUBBASIN_LOCAL_SB_LP_POLICY = if_else(CHOICE_AREA == "SUBBASIN" &  CHOICE_LOCALITY_SUBBASIN == "LOCAL" & SHARED_BOADER == 0 & 
+                                                    ((PROVINCE == 1 & PERC_AB > 0) | (PROVINCE == 3 & PERC_MB > 0) | (PROVINCE == 12 & PERC_SK > 0)),
+                                                  POLICY_AVERAGE,0 ))%>%
+  
+  mutate(WQ_SUBBASIN_LOCAL_NSB_LP_POLICY = if_else(CHOICE_AREA == "SUBBASIN" &  CHOICE_LOCALITY_SUBBASIN == "LOCAL" & SHARED_BOADER == 1 & 
+                                                     ((PROVINCE == 1 & PERC_AB > 0) | (PROVINCE == 3 & PERC_MB > 0) | (PROVINCE == 12 & PERC_SK > 0)),
+                                                   POLICY_AVERAGE,0 ))
   
   
   
-  mutate(WQ_SUBBASIN_LOCAL_NSB_CURRENT_SUBONLY =  if_else(CHOICE_AREA == "SUBBASIN" & CHOICE_LOCALITY_SUBBASIN == "LOCAL" & 
-                                                            SHARED_BOADER == 1 ,wq_sub_basin_current,0))%>%
-  mutate(WQ_SUBBASIN_LOCAL_SB_CURRENT_SUBONLY =  if_else(CHOICE_AREA == "SUBBASIN" & CHOICE_LOCALITY_SUBBASIN == "LOCAL" & 
-                                                           SHARED_BOADER == 0 ,wq_sub_basin_current,0))%>%
-  mutate(WQ_SUBBASIN_LOCAL_NSB_POLICY_SUBONLY =  if_else(CHOICE_AREA == "SUBBASIN" & CHOICE_LOCALITY_SUBBASIN == "LOCAL" & 
-                                                           SHARED_BOADER == 1 ,wq_sub_basin_policy,0))%>%
-  mutate(WQ_SUBBASIN_LOCAL_SB_POLICY_SUBONLY =  if_else(CHOICE_AREA == "SUBBASIN" & CHOICE_LOCALITY_SUBBASIN == "LOCAL" & 
-                                                          SHARED_BOADER == 0 ,wq_sub_basin_policy,0))%>%
   
-  mutate(WQ_SUBBASIN_NL_NSB_LP_CURRENT_SUBONLY = if_else(CHOICE_AREA == "SUBBASIN" &  CHOICE_LOCALITY_SUBBASIN == "NONLOCAL" & SHARED_BOADER == 1 & 
-                                                           ((PROVINCE == 1 & PERC_AB > 0) | (PROVINCE == 3 & PERC_MB > 0) | (PROVINCE == 12 & PERC_SK > 0)),
-                                                         wq_sub_basin_current,0 ))%>%
-  mutate(WQ_SUBBASIN_NL_SB_LP_CURRENT_SUBONLY = if_else(CHOICE_AREA == "SUBBASIN" &  CHOICE_LOCALITY_SUBBASIN == "NONLOCAL" & SHARED_BOADER == 0 & 
-                                                          ((PROVINCE == 1 & PERC_AB > 0) | (PROVINCE == 3 & PERC_MB > 0) | (PROVINCE == 12 & PERC_SK > 0)),
-                                                        wq_sub_basin_current,0 ))%>%
   
-  mutate(WQ_SUBBASIN_NL_NSB_LP_POLICY_SUBONLY = if_else(CHOICE_AREA == "SUBBASIN" &  CHOICE_LOCALITY_SUBBASIN == "NONLOCAL" & SHARED_BOADER == 1 & 
-                                                          ((PROVINCE == 1 & PERC_AB > 0) | (PROVINCE == 3 & PERC_MB > 0) | (PROVINCE == 12 & PERC_SK > 0)),
-                                                        wq_sub_basin_policy,0 ))%>%
-  mutate(WQ_SUBBASIN_NL_SB_LP_POLICY_SUBONLY = if_else(CHOICE_AREA == "SUBBASIN" &  CHOICE_LOCALITY_SUBBASIN == "NONLOCAL" & SHARED_BOADER == 0 & 
-                                                         ((PROVINCE == 1 & PERC_AB > 0) | (PROVINCE == 3 & PERC_MB > 0) | (PROVINCE == 12 & PERC_SK > 0)),
-                                                       wq_sub_basin_policy,0 ))%>%
   
-  mutate(WQ_SUBBASIN_NL_NSB_NLP_CURRENT_SUBONLY = if_else(CHOICE_AREA == "SUBBASIN" & CHOICE_LOCALITY_SUBBASIN == "NONLOCAL" & SHARED_BOADER == 1 &
-                                                            ((PROVINCE == 1 & (PERC_MB > 0 | PERC_SK > 0) & PERC_AB == 0) |
-                                                               (PROVINCE == 3 & (PERC_AB > 0 | PERC_SK > 0) & PERC_MB == 0) |
-                                                               (PROVINCE == 12 & (PERC_AB > 0 | PERC_MB > 0) & PERC_SK == 0)), wq_sub_basin_current,0 )) %>%
-  mutate(WQ_SUBBASIN_NL_SB_NLP_CURRENT_SUBONLY = if_else(CHOICE_AREA == "SUBBASIN" & CHOICE_LOCALITY_SUBBASIN == "NONLOCAL" & SHARED_BOADER == 0 &
-                                                           ((PROVINCE == 1 & (PERC_MB > 0 | PERC_SK > 0) & PERC_AB == 0) |
-                                                              (PROVINCE == 3 & (PERC_AB > 0 | PERC_SK > 0) & PERC_MB == 0) |
-                                                              (PROVINCE == 12 & (PERC_AB > 0 | PERC_MB > 0) & PERC_SK == 0)), wq_sub_basin_current,0 ))%>%
   
-  mutate(WQ_SUBBASIN_NL_NSB_NLP_POLICY_SUBONLY = if_else(CHOICE_AREA == "SUBBASIN" & CHOICE_LOCALITY_SUBBASIN == "NONLOCAL" & SHARED_BOADER == 1 &
-                                                           ((PROVINCE == 1 & (PERC_MB > 0 | PERC_SK > 0) & PERC_AB == 0) |
-                                                              (PROVINCE == 3 & (PERC_AB > 0 | PERC_SK > 0) & PERC_MB == 0) |
-                                                              (PROVINCE == 12 & (PERC_AB > 0 | PERC_MB > 0) & PERC_SK == 0)), wq_sub_basin_policy,0 )) %>%
-  mutate(WQ_SUBBASIN_NL_SB_NLP_POLICY_SUBONLY = if_else(CHOICE_AREA == "SUBBASIN" & CHOICE_LOCALITY_SUBBASIN == "NONLOCAL" & SHARED_BOADER == 0 &
-                                                          ((PROVINCE == 1 & (PERC_MB > 0 | PERC_SK > 0) & PERC_AB == 0) |
-                                                             (PROVINCE == 3 & (PERC_AB > 0 | PERC_SK > 0) & PERC_MB == 0) |
-                                                             (PROVINCE == 12 & (PERC_AB > 0 | PERC_MB > 0) & PERC_SK == 0)), wq_sub_basin_policy,0 ))
-
-
-
-
 ################################################################################
 # Add area as % within their home province at given level of spatial schale of choice 
 
 basin <- read.csv("./Deriveddata/basin_level_shares_province.csv")%>%
-  mutate(CHOICE_BASIN = as.character(CHOICE_BASIN))
+  mutate(CHOICE_BASIN = as.character(CHOICE_BASIN))%>%
+  select(-PROVINCE)%>%
+  group_by(CHOICE_BASIN)%>%
+  summarise(
+    AB_SHARE = sum(AB_SHARE, na.rm = TRUE),
+    MB_SHARE = sum(MB_SHARE, na.rm = TRUE),
+    SK_SHARE = sum(SK_SHARE, na.rm = TRUE),
+    .groups = 'drop'  # Optional: removes grouping in the result
+  )
+  
+  
 
-sub_basin <- read.csv("./Deriveddata/sub_basin_level_shares_province.csv")
+
+sub_basin <- read.csv("./Deriveddata/sub_basin_level_shares_province.csv")%>%
+  select(-PROVINCE)%>%
+  group_by(CHOICE_SUB_BASIN)%>%
+  summarise(
+    AB_SHARE = sum(AB_SHARE, na.rm = TRUE),
+    MB_SHARE = sum(MB_SHARE, na.rm = TRUE),
+    SK_SHARE = sum(SK_SHARE, na.rm = TRUE),
+    .groups = 'drop'  # Optional: removes grouping in the result
+  )
+  
 
 df_temp1 <- df_final%>%
   filter(CHOICE_AREA == "BASIN")%>%
-  left_join(basin, by = c("CHOICE_AREA","CHOICE_BASIN","PROVINCE"))
-
+  left_join(basin, by = c("CHOICE_BASIN"))
 
 df_temp2 <- df_final%>%
   filter(CHOICE_AREA == "SUBBASIN")%>%
-  left_join(sub_basin, by = c("CHOICE_AREA","CHOICE_SUB_BASIN","PROVINCE"))
+  left_join(sub_basin, by = c("CHOICE_SUB_BASIN"))
 
 
 df_final <- rbind(df_temp1, df_temp2) %>%
@@ -784,8 +762,13 @@ df_final <- rbind(df_temp1, df_temp2) %>%
     TRUE ~ 0
   ))%>%
   mutate(HOME_PROV_SHARE = if_else(is.na(HOME_PROV_SHARE), 0, HOME_PROV_SHARE))%>%
-  mutate(HOME_PROV_SHARE = HOME_PROV_SHARE/100)
-
+  mutate(HOME_PROV_SHARE = HOME_PROV_SHARE/100)%>%
+  
+  mutate(AREA_INSTATE_LOCAL = ifelse(CHOICE_AREA == "BASIN" & CHOICE_LOCALITY_BASIN == "LOCAL", HOME_PROV_SHARE, 0)) %>%
+  mutate(AREA_INSTATE_LOCAL = ifelse(CHOICE_AREA == "SUBBASIN" & CHOICE_LOCALITY_SUBBASIN == "LOCAL", HOME_PROV_SHARE, AREA_INSTATE_LOCAL))%>%
+  
+  mutate(AREA_INSTATE_NONLOCAL = ifelse(CHOICE_AREA == "BASIN" & CHOICE_LOCALITY_BASIN == "NONLOCAL", HOME_PROV_SHARE, 0)) %>%
+  mutate(AREA_INSTATE_NONLOCAL = ifelse(CHOICE_AREA == "SUBBASIN" & CHOICE_LOCALITY_SUBBASIN == "NONLOCAL", HOME_PROV_SHARE, AREA_INSTATE_NONLOCAL))
 
 
 ###############################################################################
@@ -1376,6 +1359,13 @@ df_final <- df_final %>%
 df_final <- df_final%>%
   mutate(WQ_CHANGE = ifelse(CHOICE_AREA == "BASIN", CURRENT_AVERAGE - POLICY_AVERAGE, NA)) %>%
   mutate(WQ_CHANGE = ifelse(CHOICE_AREA == "SUBBASIN", wq_sub_basin_current - wq_sub_basin_policy, WQ_CHANGE))%>%
+  
+  mutate(BASELINE_X_WQCHANGE_LOCAL_BASIN = ifelse(CHOICE_AREA == "BASIN" & CHOICE_LOCALITY_BASIN == "LOCAL",WQ_CHANGE*CURRENT_AVERAGE,0))%>%
+  mutate(BASELINE_X_WQCHANGE_NL_BASIN = ifelse(CHOICE_AREA == "BASIN" & CHOICE_LOCALITY_BASIN == "NONLOCAL",WQ_CHANGE*CURRENT_AVERAGE,0))%>%
+  
+  mutate(BASELINE_X_WQCHANGE_LOCAL_SUBBASIN = ifelse(CHOICE_AREA == "SUBBASIN" & CHOICE_LOCALITY_SUBBASIN == "LOCAL",WQ_CHANGE*wq_sub_basin_current,0))%>%
+  mutate(BASELINE_X_WQCHANGE_NL_SUBBASIN = ifelse(CHOICE_AREA == "SUBBASIN" & CHOICE_LOCALITY_SUBBASIN == "NONLOCAL",WQ_CHANGE*wq_sub_basin_current,0))%>%
+  
   mutate(BASELINE_X_WQCHANGE = ifelse(CHOICE_AREA == "BASIN", WQ_CHANGE*CURRENT_AVERAGE, NA))%>%
   mutate(BASELINE_X_WQCHANGE = ifelse(CHOICE_AREA == "SUBBASIN", WQ_CHANGE*wq_sub_basin_current,BASELINE_X_WQCHANGE ))
 
@@ -1383,33 +1373,53 @@ df_final <- df_final%>%
 
 
 ################################################################################
+# create WQ variable that account basin level average for basin level choice and sub basin level value for sub basin level choice
+# This aggregate column use in Model 1 (where did not discriminate spatial boundaries)
+
+df_final <- df_final%>%
+  mutate(WQ_CURRENT_CHOICE = ifelse(CHOICE_AREA == "BASIN",CURRENT_AVERAGE,NA))%>%
+  mutate(WQ_CURRENT_CHOICE = ifelse(CHOICE_AREA == "SUBBASIN",wq_sub_basin_current,WQ_CURRENT_CHOICE))%>%
+  
+  mutate(WQ_POLICY_CHOICE = ifelse(CHOICE_AREA == "BASIN",POLICY_AVERAGE,NA))%>%
+  mutate(WQ_POLICY_CHOICE = ifelse(CHOICE_AREA == "SUBBASIN",wq_sub_basin_policy,WQ_POLICY_CHOICE))
+  
 
 # Reorder columns to allingn with the order of the survey
 
 df_final <- df_final[, c( "CaseId","CONDITION","TREATMENT","VERSION","SURVEY_VERSION_1","SURVEY_VERSION_2", "VERSION_1", "VERSION_2", "VERSION_3", "VERSION_4",
                           "BLK_NUMBER","CHOICE_NUMBER","BASIN","SUB_BASIN","NON_LOCAL",
-                          "IMAGECURRENT","IMAGEPOLICY","CURRENT_AVERAGE","POLICY_AVERAGE","WQ_CHANGE", "BASELINE_X_WQCHANGE",
+                          "IMAGECURRENT","IMAGEPOLICY","CURRENT_AVERAGE","POLICY_AVERAGE",
+                          "WQ_CHANGE", "BASELINE_X_WQCHANGE",
+                          
+                          "BASELINE_X_WQCHANGE_LOCAL_BASIN","BASELINE_X_WQCHANGE_NL_BASIN",
+                          "BASELINE_X_WQCHANGE_LOCAL_SUBBASIN","BASELINE_X_WQCHANGE_NL_SUBBASIN",
+                          
+                          
                           "CHOICE_AREA","CHOICE_BASIN","CHOICE_SUB_BASIN","CHOICE_LOCALITY_BASIN","CHOICE_LOCALITY_SUBBASIN",
                           "POLICY_SIZE_KM","POLICY_SIZE_PERCENT","WQ_UP1","WQ_UP2","WQ_UP3","WQ_BY1",
                           "WQ_LOCAL_CURRENT","WQ_NL_CURRENT","WQ_LOCAL_POLICY","WQ_NL_POLICY",
                           "SHARED_BOADER","SHARED_BOADER_PROV",
                           "WQ_HOME_CURRENT","WQ_HOME_POLICY",
-                          "WQ_SUBBASIN_LOCAL_CURRENT","WQ_SUBBASIN_NL_CURRENT","WQ_SUBBASIN_LOCAL_POLICY","WQ_SUBBASIN_NL_POLICY",
-                          "WQ_BASIN_LOCAL_CURRENT","WQ_BASIN_NL_CURRENT","WQ_BASIN_LOCAL_POLICY","WQ_BASIN_NL_POLICY",
-                          "WQ_SUBBASIN_LOCAL_NSB_CURRENT","WQ_SUBBASIN_LOCAL_SB_CURRENT","WQ_SUBBASIN_LOCAL_NSB_POLICY","WQ_SUBBASIN_LOCAL_SB_POLICY",
-                          "WQ_SUBBASIN_NL_NSB_LP_CURRENT","WQ_SUBBASIN_NL_SB_LP_CURRENT","WQ_SUBBASIN_NL_NSB_LP_POLICY","WQ_SUBBASIN_NL_SB_LP_POLICY",
-                          "WQ_SUBBASIN_NL_NSB_NLP_CURRENT","WQ_SUBBASIN_NL_SB_NLP_CURRENT","WQ_SUBBASIN_NL_NSB_NLP_POLICY","WQ_SUBBASIN_NL_SB_NLP_POLICY",
-
-                          "WQ_SUBBASIN_LOCAL_CURRENT_SUBONLY","WQ_SUBBASIN_NL_CURRENT_SUBONLY",
-                          "WQ_SUBBASIN_LOCAL_POLICY_SUBONLY","WQ_SUBBASIN_NL_POLICY_SUBONLY",
-                          "WQ_SUBBASIN_LOCAL_NSB_CURRENT_SUBONLY","WQ_SUBBASIN_LOCAL_SB_CURRENT_SUBONLY", 
-                          "WQ_SUBBASIN_LOCAL_NSB_POLICY_SUBONLY","WQ_SUBBASIN_LOCAL_SB_POLICY_SUBONLY",
-                          "WQ_SUBBASIN_NL_NSB_LP_CURRENT_SUBONLY","WQ_SUBBASIN_NL_SB_LP_CURRENT_SUBONLY",
-                          "WQ_SUBBASIN_NL_NSB_LP_POLICY_SUBONLY","WQ_SUBBASIN_NL_SB_LP_POLICY_SUBONLY",
-                          "WQ_SUBBASIN_NL_NSB_NLP_CURRENT_SUBONLY","WQ_SUBBASIN_NL_SB_NLP_CURRENT_SUBONLY",
-                          "WQ_SUBBASIN_NL_NSB_NLP_POLICY_SUBONLY","WQ_SUBBASIN_NL_SB_NLP_POLICY_SUBONLY",
                           
-                          "HOME_PROV_SHARE","LOCAL_ADJUCENT",
+                          "WQ_BASIN_LOCAL_CURRENT", "WQ_BASIN_LOCAL_POLICY",
+                          "WQ_BASIN_NL_CURRENT", "WQ_BASIN_NL_POLICY",
+                          "WQ_SUBBASIN_LOCAL_CURRENT_SUBONLY", "WQ_SUBBASIN_LOCAL_POLICY_SUBONLY",
+                          "WQ_SUBBASIN_NL_CURRENT_SUBONLY","WQ_SUBBASIN_NL_POLICY_SUBONLY",
+                          
+                          "WQ_SUBBASIN_LOCAL_SB_CURRENT", "WQ_SUBBASIN_LOCAL_NSB_CURRENT",
+                          "WQ_SUBBASIN_LOCAL_SB_POLICY", "WQ_SUBBASIN_LOCAL_NSB_POLICY",
+                          "WQ_SUBBASIN_NONLOCAL_SB_CURRENT","WQ_SUBBASIN_NONLOCAL_NSB_CURRENT",
+                          "WQ_SUBBASIN_NONLOCAL_SB_POLICY", "WQ_SUBBASIN_NONLOCAL_NSB_POLICY",
+                          "WQ_SUBBASIN_LOCAL_SB_LP_CURRENT", "WQ_SUBBASIN_LOCAL_NSB_LP_CURRENT",
+                          "WQ_SUBBASIN_LOCAL_SB_LP_POLICY", "WQ_SUBBASIN_LOCAL_NSB_LP_POLICY",
+                          
+                          
+                          "WQ_CURRENT_CHOICE", "WQ_POLICY_CHOICE",
+                          
+                          "POLICY_SIZE_KM",
+                          "HOME_PROV_SHARE",
+                          "AREA_INSTATE_LOCAL","AREA_INSTATE_NONLOCAL",
+                          "LOCAL_ADJUCENT",
                           
                           "COST","VOTE",
                           "UID","PROVINCE", "AGE", "GENDER", "LANGUAGE", "INCOME", "POSTALCODE",

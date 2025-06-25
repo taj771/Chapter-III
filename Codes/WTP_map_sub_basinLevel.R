@@ -177,46 +177,22 @@ vcov_matrix <- model$robvarcov
 
 
 
-df_basin <- st_read("/Users/tharakajayalath/Library/CloudStorage/OneDrive-UniversityofSaskatchewan/Chapter III-UseNonUseValue/Survey/Shapefile/study_area_map_with_WQ.shp")%>%
-  mutate(WQ_V1 = str_remove(WQ_V1, "Level"))%>%
-  mutate(WQ_V2 = str_remove(WQ_V2, "Level"))%>%
-  mutate(WQ_V1 = as.numeric(WQ_V1))%>%
-  mutate(WQ_V2 = as.numeric(WQ_V2))%>%
-  group_by(basin)%>%
-  mutate(AVE_WQ_BASIN_V1 = mean(WQ_V1))%>%
-  mutate(AVE_WQ_BASIN_V2 = mean(WQ_V2))%>%
-  select(basin,AVE_WQ_BASIN_V1,AVE_WQ_BASIN_V2)%>%
-  distinct(basin, .keep_all = T )%>%
-  mutate(AVE_WQ_BASIN = (AVE_WQ_BASIN_V1+AVE_WQ_BASIN_V2)/2)
+sub_basin_wq <- read_csv("./Deriveddata/Baseline_WQ_sub_basin.csv")
 
 
-df_subbasin <- st_read("/Users/tharakajayalath/Library/CloudStorage/OneDrive-UniversityofSaskatchewan/Chapter III-UseNonUseValue/Survey/Shapefile/study_area_map_with_WQ.shp")%>%
-  mutate(WQ_V1 = str_remove(WQ_V1, "Level"))%>%
-  mutate(WQ_V2 = str_remove(WQ_V2, "Level"))%>%
-  mutate(WQ_V1 = as.numeric(WQ_V1))%>%
-  mutate(WQ_V2 = as.numeric(WQ_V2))%>%
-  group_by(WSCSDA_E)%>%
-  select(name_code,WQ_V1,WQ_V2)%>%
-  distinct(name_code, .keep_all = T )%>%
-  mutate(AVE_WQ_SUB_BASIN = (WQ_V1+WQ_V2)/2)
-
-
-
-
-
-# Sub-basin - BO
+# Sub-basin - BO - 1
 
 df1 <- deltaMethod(
   object = coef_values, 
   vcov. = vcov_matrix, 
-  g = paste0("-((mu_b_asc + mu_b_wq_local_basin*2 - (mu_b_wq_local_basin*2", "))/b_cost)")
+  g = paste0("-((mu_b_asc + mu_b_wq_local_basin*1 - (mu_b_wq_local_basin*1", "))/b_cost)")
 )%>% 
   {`rownames<-`(., NULL)}%>%
   mutate(name_code = "BO")%>%
   relocate(name_code, .before = 1)%>%
   mutate(across(where(is.numeric), ~ round(.x, 0)))
 
-# Sub-basin - UNS
+# Sub-basin - UNS - 2
 
 df2 <- deltaMethod(
   object = coef_values, 
@@ -228,11 +204,11 @@ df2 <- deltaMethod(
   relocate(name_code, .before = 1)%>%
   mutate(across(where(is.numeric), ~ round(.x, 0)))
 
-# Sub-basin - AS
+# Sub-basin - AS -3
 df3 <- deltaMethod(
   object = coef_values, 
   vcov. = vcov_matrix, 
-  g = paste0("-((mu_b_asc + mu_b_wq_local_basin*2 - (mu_b_wq_local_basin*2.5", "))/b_cost)")
+  g = paste0("-((mu_b_asc + mu_b_wq_local_basin*2 - (mu_b_wq_local_basin*3", "))/b_cost)")
 )%>% 
   {`rownames<-`(., NULL)}%>%
   mutate(name_code = "AS")%>%
@@ -240,11 +216,11 @@ df3 <- deltaMethod(
   mutate(across(where(is.numeric), ~ round(.x, 0)))
 
 
-# Sub-basin - QU
+# Sub-basin - QU - 3
 df4 <- deltaMethod(
   object = coef_values, 
   vcov. = vcov_matrix, 
-  g = paste0("-((mu_b_asc + mu_b_wq_local_basin*2 - (mu_b_wq_local_basin*2.5", "))/b_cost)")
+  g = paste0("-((mu_b_asc + mu_b_wq_local_basin*2 - (mu_b_wq_local_basin*3", "))/b_cost)")
 )%>% 
   {`rownames<-`(., NULL)}%>%
   mutate(name_code = "QU")%>%
@@ -253,11 +229,11 @@ df4 <- deltaMethod(
 
 
 
-# Sub-basin - RE
+# Sub-basin - RE - 3
 df5 <- deltaMethod(
   object = coef_values, 
   vcov. = vcov_matrix, 
-  g = paste0("-((mu_b_asc + mu_b_wq_local_basin*2 - (mu_b_wq_local_basin*2.5", "))/b_cost)")
+  g = paste0("-((mu_b_asc + mu_b_wq_local_basin*2 - (mu_b_wq_local_basin*3", "))/b_cost)")
 )%>% 
   {`rownames<-`(., NULL)}%>%
   mutate(name_code = "RE")%>%
@@ -266,11 +242,11 @@ df5 <- deltaMethod(
 
 
 
-# Sub-basin - SO
+# Sub-basin - SO - 3
 df6 <- deltaMethod(
   object = coef_values, 
   vcov. = vcov_matrix, 
-  g = paste0("-((mu_b_asc + mu_b_wq_local_basin*2 - (mu_b_wq_local_basin*2.5", "))/b_cost)")
+  g = paste0("-((mu_b_asc + mu_b_wq_local_basin*2 - (mu_b_wq_local_basin*3", "))/b_cost)")
 )%>% 
   {`rownames<-`(., NULL)}%>%
   mutate(name_code = "SO")%>%
@@ -280,11 +256,11 @@ df6 <- deltaMethod(
 
 
 
-# Sub-basin - LNS
+# Sub-basin - LNS - 2.5
 df7 <- deltaMethod(
   object = coef_values, 
   vcov. = vcov_matrix, 
-  g = paste0("-((mu_b_asc + mu_b_wq_local_basin*2 - (mu_b_wq_local_basin*3", "))/b_cost)")
+  g = paste0("-((mu_b_asc + mu_b_wq_local_basin*2 - (mu_b_wq_local_basin*2.5", "))/b_cost)")
 )%>% 
   {`rownames<-`(., NULL)}%>%
   mutate(name_code = "LNS")%>%
@@ -292,11 +268,11 @@ df7 <- deltaMethod(
   mutate(across(where(is.numeric), ~ round(.x, 0)))
 
 
-# Sub-basin - CNS
+# Sub-basin - CNS - 2
 df8 <- deltaMethod(
   object = coef_values, 
   vcov. = vcov_matrix, 
-  g = paste0("-((mu_b_asc + mu_b_wq_local_basin*2 - (mu_b_wq_local_basin*3", "))/b_cost)")
+  g = paste0("-((mu_b_asc + mu_b_wq_local_basin*2 - (mu_b_wq_local_basin*2", "))/b_cost)")
 )%>% 
   {`rownames<-`(., NULL)}%>%
   mutate(name_code = "CNS")%>%
@@ -304,7 +280,7 @@ df8 <- deltaMethod(
   mutate(across(where(is.numeric), ~ round(.x, 0)))
 
 
-# Sub-basin - LWM
+# Sub-basin - LWM - 3
 df9 <- deltaMethod(
   object = coef_values, 
   vcov. = vcov_matrix, 
@@ -317,11 +293,11 @@ df9 <- deltaMethod(
 
 
 
-# Sub-basin - USS
+# Sub-basin - USS - 3.75
 df10 <- deltaMethod(
   object = coef_values, 
   vcov. = vcov_matrix, 
-  g = paste0("-((mu_b_asc + mu_b_wq_local_basin*2 - (mu_b_wq_local_basin*3.5", "))/b_cost)")
+  g = paste0("-((mu_b_asc + mu_b_wq_local_basin*2 - (mu_b_wq_local_basin*3.75", "))/b_cost)")
 )%>% 
   {`rownames<-`(., NULL)}%>%
   mutate(name_code = "USS")%>%
@@ -329,11 +305,11 @@ df10 <- deltaMethod(
   mutate(across(where(is.numeric), ~ round(.x, 0)))
 
 
-# Sub-basin - LSS
+# Sub-basin - LSS - 3.75
 df11 <- deltaMethod(
   object = coef_values, 
   vcov. = vcov_matrix, 
-  g = paste0("-((mu_b_asc + mu_b_wq_local_basin*2 - (mu_b_wq_local_basin*3.5", "))/b_cost)")
+  g = paste0("-((mu_b_asc + mu_b_wq_local_basin*2 - (mu_b_wq_local_basin*3.75", "))/b_cost)")
 )%>% 
   {`rownames<-`(., NULL)}%>%
   mutate(name_code = "LSS")%>%
@@ -341,11 +317,11 @@ df11 <- deltaMethod(
   mutate(across(where(is.numeric), ~ round(.x, 0)))
 
 
-# Sub-basin - 	RD
+# Sub-basin - 	RD - 2
 df12 <- deltaMethod(
   object = coef_values, 
   vcov. = vcov_matrix, 
-  g = paste0("-((mu_b_asc + mu_b_wq_local_basin*2 - (mu_b_wq_local_basin*3.5", "))/b_cost)")
+  g = paste0("-((mu_b_asc + mu_b_wq_local_basin*2 - (mu_b_wq_local_basin*2", "))/b_cost)")
 )%>% 
   {`rownames<-`(., NULL)}%>%
   mutate(name_code = "RD")%>%
@@ -353,11 +329,11 @@ df12 <- deltaMethod(
   mutate(across(where(is.numeric), ~ round(.x, 0)))
 
 
-# Sub-basin - 	ELW
+# Sub-basin - 	ELW - 3
 df13 <- deltaMethod(
   object = coef_values, 
   vcov. = vcov_matrix, 
-  g = paste0("-((mu_b_asc + mu_b_wq_local_basin*2 - (mu_b_wq_local_basin*3.5", "))/b_cost)")
+  g = paste0("-((mu_b_asc + mu_b_wq_local_basin*2 - (mu_b_wq_local_basin*3", "))/b_cost)")
 )%>% 
   {`rownames<-`(., NULL)}%>%
   mutate(name_code = "ELW")%>%
@@ -365,11 +341,11 @@ df13 <- deltaMethod(
   mutate(across(where(is.numeric), ~ round(.x, 0)))
 
 
-# Sub-basin - 	NE
+# Sub-basin - 	NE - 3
 df14 <- deltaMethod(
   object = coef_values, 
   vcov. = vcov_matrix, 
-  g = paste0("-((mu_b_asc + mu_b_wq_local_basin*2 - (mu_b_wq_local_basin*3.5", "))/b_cost)")
+  g = paste0("-((mu_b_asc + mu_b_wq_local_basin*2 - (mu_b_wq_local_basin*3", "))/b_cost)")
 )%>% 
   {`rownames<-`(., NULL)}%>%
   mutate(name_code = "NE")%>%
@@ -377,11 +353,11 @@ df14 <- deltaMethod(
   mutate(across(where(is.numeric), ~ round(.x, 0)))
 
 
-# Sub-basin - 	BA
+# Sub-basin - 	BA - 3
 df15 <- deltaMethod(
   object = coef_values, 
   vcov. = vcov_matrix, 
-  g = paste0("-((mu_b_asc + mu_b_wq_local_basin*2 - (mu_b_wq_local_basin*4", "))/b_cost)")
+  g = paste0("-((mu_b_asc + mu_b_wq_local_basin*2 - (mu_b_wq_local_basin*3", "))/b_cost)")
 )%>% 
   {`rownames<-`(., NULL)}%>%
   mutate(name_code = "BA")%>%
@@ -389,11 +365,11 @@ df15 <- deltaMethod(
   mutate(across(where(is.numeric), ~ round(.x, 0)))
 
 
-# Sub-basin - 	SA
+# Sub-basin - 	SA - 3.5
 df16 <- deltaMethod(
   object = coef_values, 
   vcov. = vcov_matrix, 
-  g = paste0("-((mu_b_asc + mu_b_wq_local_basin*2 - (mu_b_wq_local_basin*4", "))/b_cost)")
+  g = paste0("-((mu_b_asc + mu_b_wq_local_basin*2 - (mu_b_wq_local_basin*3.5", "))/b_cost)")
 )%>% 
   {`rownames<-`(., NULL)}%>%
   mutate(name_code = "SA")%>%
@@ -401,7 +377,7 @@ df16 <- deltaMethod(
   mutate(across(where(is.numeric), ~ round(.x, 0)))
 
 
-# Sub-basin - 	GB
+# Sub-basin - 	GB - 4
 df17 <- deltaMethod(
   object = coef_values, 
   vcov. = vcov_matrix, 
@@ -413,7 +389,7 @@ df17 <- deltaMethod(
   mutate(across(where(is.numeric), ~ round(.x, 0)))
 
 
-# Sub-basin - 	WLW
+# Sub-basin - 	WLW - 5
 df18 <- deltaMethod(
   object = coef_values, 
   vcov. = vcov_matrix, 
@@ -439,7 +415,8 @@ df <- df%>%
   as.data.frame()
 
 df_map<- df_map%>%
-  left_join(df)
+  left_join(df)%>%
+  mutate(HEALTH_SCORE = as.numeric(str_remove(WQ_FINAL, "Level")))
 
 
 ab <- st_read("/Users/tharakajayalath/Library/CloudStorage/OneDrive-UniversityofSaskatchewan/Chapter III-UseNonUseValue/Survey/Shapefile/AB.shp")
@@ -463,6 +440,68 @@ cities <- st_as_sf(geocoded_cities, coords = c("longitude", "latitude"), crs = 4
 
 
 # Get the number of unique values in WTP_2
+n_colors <- length(unique(df_map$HEALTH_SCORE))
+
+# Generate a vector of n unique colors
+library(viridis)
+my_colors <- colorRampPalette(c("lightblue", "darkgreen", "yellow", "orange", "red"))
+custom_palette <- my_colors(n_colors)
+
+
+value_map <- tm_shape(df_map, crs = 3347)+
+  tm_fill(    col = "HEALTH_SCORE",
+              palette = custom_palette,
+              style = "cont",
+              title = "Health Score",
+              labels = c("Very good", "Good", "Fair", "Poor", "Very poor")
+  ) +
+  tm_borders() +
+  #tm_text("name_code", size = 0.8, col = "black", remove.overlap = TRUE)+  # Adjust size,
+  tm_shape(ab, crs = 3347) +
+  tm_borders(col = "black", lwd = 2)+
+  tm_shape(mb, crs = 3347) +
+  tm_borders(col = "black", lwd = 2)+
+  tm_shape(sk, crs = 3347) +
+  tm_borders(col = "black", lwd = 2)+ 
+  #tm_shape(ab_cities) +
+  #tm_borders(col = "black", lwd = 2)+
+  #tm_text("name", size = 0.6, col = "black", remove.overlap = TRUE)+  # Adjust size,
+  #tm_shape(mb_cities) +
+  #tm_borders(col = "black", lwd = 2)+
+  #tm_text("name", size = 0.6, col = "black", remove.overlap = TRUE)+  # Adjust size,
+  #tm_shape(sk_cities) +
+  #tm_borders(col = "black", lwd = 2)+ 
+  #tm_text("name", size = 0.6, col = "black", remove.overlap = TRUE)+  # Adjust size,
+  tm_layout(frame = FALSE)+
+  tm_scale_bar(
+    breaks = c(0, 100, 200,300,400),       # custom distance labels
+    text.size = 0.5,               # smaller text
+    position = c(0.6, 0.008),       # custom position
+    color.dark = "black",          # tick and text color
+    color.light = "white"          # fill for alternating blocks
+  ) +
+  tm_compass(
+    type = "arrow",              # options: "arrow", "8star", "radar"
+    size = 2,                    # size of the compass
+    position = c(0.9, 0.9)       # custom position (x, y: 0 to 1 scale)
+  )+
+  
+  tm_shape(cities) +
+  tm_symbols(col = "blue", size = 0.1) +
+  tm_text("city", size = 0.7, col = "black",ymod = -0.5)+
+  
+  tm_legend(frame = F)
+
+# Save to PNG
+tmap_save(value_map, "Figures/current_wq_level.png", width = 10, height = 8, units = "in", dpi = 300)
+
+
+
+
+
+
+
+# Get the number of unique values in WTP_2
 n_colors <- length(unique(df_map$WTP_2))
 
 # Generate a vector of n unique colors
@@ -474,7 +513,7 @@ custom_palette <- viridis(n_colors, option = "I")
 value_map <- tm_shape(df_map, crs = 3347)+
   tm_fill(    col = "WTP_2",
               palette = custom_palette,
-              style = "cat",
+              style = "cont",
               title = "Willingness to Pay ($)"
   ) +
   tm_borders() +

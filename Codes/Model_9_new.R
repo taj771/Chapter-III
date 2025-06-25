@@ -1,5 +1,5 @@
 ########################################################################################
-# Description: RPM Model 2
+# Description: RPM Model 9
 #######################################################################################
 
 
@@ -17,7 +17,7 @@ apollo_initialise()
 
 ### Set core controls
 apollo_control = list(
-  modelName       = "Model 2",
+  modelName       = "Model 9",
   modelDescr      = "Mixed-MNL",
   indivID         = "CaseId",  
   nCores          = 8,
@@ -28,8 +28,8 @@ apollo_control = list(
 #### LOAD DATA                                                   ####
 # ################################################################# #
 
-database <- read_csv("Deriveddata/processed_pilotdata_1_Apollo.csv")
-
+database <- read_csv("Deriveddata/processed_pilotdata_1_Apollo.csv")%>%
+  filter(VERSION_4 ==1)
 
 # Arrange data by RespondentID
 database <- database %>%
@@ -57,29 +57,16 @@ database <- database %>%
 apollo_beta = c(
   mu_b_asc     = 0,  
   sigma_b_asc = 0.01,
-  
-  mu_b_asc_shared_bound = 0,
-  sigma_b_asc_shared_bound = 0,
-  
-  mu_b_asc_home_provshare = 0,
-  sigma_b_asc_home_provshare = 0,
-  
-  mu_b_asc_local_adjacent = 0,
-  sigma_b_asc_local_adjacent = 0,
-  
-  b_cost  = 0,  
-  
+  b_cost  = 0,   
   mu_b_wq_local_basin = 0,
-  sigma_b_wq_local_basin = 0,
-  
+  sigma_b_wq_local_basin = 0.1,
   mu_b_wq_nonlocal_basin = 0,
-  sigma_b_wq_nonlocal_basin = 0,
-  
+  sigma_b_wq_nonlocal_basin = 0.1,
   mu_b_wq_local_sub_basin = 0,
-  sigma_b_wq_local_sub_basin = 0,
-  
+  sigma_b_wq_local_sub_basin = 0.1,
   mu_b_wq_nonlocal_sub_basin = 0,
-  sigma_b_wq_nonlocal_sub_basin = 0
+  sigma_b_wq_nonlocal_sub_basin = 0.1
+  
   
 )
 
@@ -97,9 +84,6 @@ apollo_draws = list(
   interNDraws    = 1000,
   interUnifDraws = c(),
   interNormDraws = c("draws_asc",
-                     "draws_asc_shared_bound",
-                     "draws_asc_home_provshare",
-                     "draws_asc_local_adjacent",
                      "draws_wq_local_basin","draws_wq_nonlocal_basin",
                      "draws_wq_local_sub_basin","draws_wq_nonlocal_sub_basin"),
   intraDrawsType = "halton",
@@ -112,14 +96,7 @@ apollo_draws = list(
 ### Create random parameters
 apollo_randCoeff = function(apollo_beta, apollo_inputs){
   randcoeff = list()
-  
   randcoeff[["b_asc"]] = mu_b_asc + sigma_b_asc*draws_asc 
-  
-  randcoeff[["b_asc_shared_bound"]] = mu_b_asc_shared_bound + sigma_b_asc_shared_bound*draws_asc_shared_bound
-   
-  randcoeff[["b_asc_home_provshare"]] = mu_b_asc_home_provshare + sigma_b_asc_home_provshare*draws_asc_home_provshare 
-  
-  randcoeff[["b_asc_local_adjacent"]] = mu_b_asc_local_adjacent + sigma_b_asc_local_adjacent*draws_asc_local_adjacent
   
   randcoeff[["b_wq_local_basin"]] =  mu_b_wq_local_basin + sigma_b_wq_local_basin*draws_wq_local_basin
   randcoeff[["b_wq_nonlocal_basin"]] =  mu_b_wq_nonlocal_basin + sigma_b_wq_nonlocal_basin*draws_wq_nonlocal_basin
@@ -148,11 +125,7 @@ apollo_probabilities = function(apollo_beta, apollo_inputs, functionality = "est
   
   # Define utilities
   V = list()
-  V[["policy"]]  = b_asc + 
-    b_asc_shared_bound*SHARED_BOADER_PROV +
-    b_asc_home_provshare*HOME_PROV_SHARE +
-    b_asc_local_adjacent*LOCAL_ADJUCENT +
-    b_cost *COST + 
+  V[["policy"]]  = b_asc + b_cost *COST + 
     b_wq_local_basin*WQ_BASIN_LOCAL_POLICY +
     b_wq_nonlocal_basin*WQ_BASIN_NL_POLICY +
     b_wq_local_sub_basin*WQ_SUBBASIN_LOCAL_POLICY_SUBONLY +

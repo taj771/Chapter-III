@@ -30,6 +30,7 @@ apollo_control = list(
 
 database <- read_csv("Deriveddata/processed_pilotdata_1_Apollo.csv")
 
+
 # Arrange data by RespondentID
 database <- database %>%
   arrange(CaseId)
@@ -47,9 +48,7 @@ database <- database %>%
   filter(!is.na(WQ_BASIN_NL_CURRENT))%>%
   
   filter(!is.na(WQ_BASIN_LOCAL_POLICY))%>%
-  filter(!is.na(WQ_BASIN_NL_POLICY))%>%
-  
-  filter(!is.na(REC_TRIP))
+  filter(!is.na(WQ_BASIN_NL_POLICY))
 
 # ################################################################# #
 #### DEFINE MODEL PARAMETERS                                     ####
@@ -59,36 +58,32 @@ apollo_beta = c(
   mu_b_asc     = 0,  
   sigma_b_asc = 0.01,
   
-  mu_b_asc_shared_bound = 0,
-  sigma_b_asc_shared_bound = 0,
-  
-  mu_b_asc_home_provshare = 0,
-  sigma_b_asc_home_provshare = 0,
-  
-  mu_b_asc_local_adjacent = 0,
-  sigma_b_asc_local_adjacent = 0,
-  
-  b_asc_rectrip = 0,
-  #sigma_b_asc_rectrip = 0,
-  
-  b_asc_rectrip_choice = 0,
-  #sigma_b_asc_rectrip_choice = 0,
-  
   b_cost  = 0,  
   
   mu_b_wq_local_basin = 0,
-  sigma_b_wq_local_basin = 0.01,
+  sigma_b_wq_local_basin = 0,
   
   mu_b_wq_nonlocal_basin = 0,
-  sigma_b_wq_nonlocal_basin = 0.01,
+  sigma_b_wq_nonlocal_basin = 0,
   
-  mu_b_wq_local_sub_basin = 0,
-  sigma_b_wq_local_sub_basin = 0.01,
+  mu_b_wq_local_sub_basin_sb = 0,
+  sigma_b_wq_local_sub_basin_sb = 0,
   
-  mu_b_wq_nonlocal_sub_basin = 0,
-  sigma_b_wq_nonlocal_sub_basin = 0.01
+  mu_b_wq_local_sub_basin_nsb = 0,
+  sigma_b_wq_local_sub_basin_nsb = 0,
   
+  mu_b_wq_nonlocal_sub_basin_sb = 0,
+  sigma_b_wq_nonlocal_sub_basin_sb = 0,
+  
+  mu_b_wq_nonlocal_sub_basin_nsb = 0,
+  sigma_b_wq_nonlocal_sub_basin_nsb = 0, 
+  
+  mu_b_home_prov_share = 0,
+  sigma_b_home_prov_share =0
+  
+
 )
+
 
 ### Vector with names (in quotes) of parameters to be kept fixed at their starting value in apollo_beta, use apollo_beta_fixed = c() if none
 apollo_fixed = c()
@@ -104,13 +99,11 @@ apollo_draws = list(
   interNDraws    = 1000,
   interUnifDraws = c(),
   interNormDraws = c("draws_asc",
-                     "draws_asc_shared_bound",
-                     "draws_asc_home_provshare",
-                     "draws_asc_local_adjacent",
-                     #"draws_asc_rectrip",
-                     #"draws_asc_rectrip_choice",
                      "draws_wq_local_basin","draws_wq_nonlocal_basin",
-                     "draws_wq_local_sub_basin","draws_wq_nonlocal_sub_basin"),
+                     "draws_wq_local_sub_basin_sb","draws_wq_local_sub_basin_nsb",
+                     "draws_wq_nonlocal_sub_basin_sb","draws_wq_nonlocal_sub_basin_nsb",
+                     "draws_home_prov_share"
+                     ),
   intraDrawsType = "halton",
   intraNDraws    = 0,
   intraUnifDraws = c(),
@@ -124,22 +117,18 @@ apollo_randCoeff = function(apollo_beta, apollo_inputs){
   
   randcoeff[["b_asc"]] = mu_b_asc + sigma_b_asc*draws_asc 
   
-  randcoeff[["b_asc_shared_bound"]] = mu_b_asc_shared_bound + sigma_b_asc_shared_bound*draws_asc_shared_bound
-  
-  randcoeff[["b_asc_home_provshare"]] = mu_b_asc_home_provshare + sigma_b_asc_home_provshare*draws_asc_home_provshare 
-  
-  randcoeff[["b_asc_local_adjacent"]] = mu_b_asc_local_adjacent + sigma_b_asc_local_adjacent*draws_asc_local_adjacent
-  
-  #randcoeff[["b_asc_rectrip"]] = mu_b_asc_rectrip + sigma_b_asc_rectrip*draws_asc_rectrip 
-  
-  #randcoeff[["b_asc_rectrip_choice"]] = mu_b_asc_rectrip_choice + sigma_b_asc_rectrip_choice*draws_asc_rectrip_choice 
-  
   randcoeff[["b_wq_local_basin"]] =  mu_b_wq_local_basin + sigma_b_wq_local_basin*draws_wq_local_basin
   randcoeff[["b_wq_nonlocal_basin"]] =  mu_b_wq_nonlocal_basin + sigma_b_wq_nonlocal_basin*draws_wq_nonlocal_basin
   
-  randcoeff[["b_wq_local_sub_basin"]] =  mu_b_wq_local_sub_basin + sigma_b_wq_local_sub_basin*draws_wq_local_sub_basin
-  randcoeff[["b_wq_nonlocal_sub_basin"]] =  mu_b_wq_nonlocal_sub_basin + sigma_b_wq_nonlocal_sub_basin*draws_wq_nonlocal_sub_basin
+  randcoeff[["b_wq_local_sub_basin_sb"]] =  mu_b_wq_local_sub_basin_sb + sigma_b_wq_local_sub_basin_sb*draws_wq_local_sub_basin_sb
+  randcoeff[["b_wq_local_sub_basin_nsb"]] =  mu_b_wq_local_sub_basin_nsb + sigma_b_wq_local_sub_basin_nsb*draws_wq_local_sub_basin_nsb
   
+  randcoeff[["b_wq_nonlocal_sub_basin_sb"]] =  mu_b_wq_nonlocal_sub_basin_sb + sigma_b_wq_nonlocal_sub_basin_sb*draws_wq_nonlocal_sub_basin_sb
+  randcoeff[["b_wq_nonlocal_sub_basin_nsb"]] =  mu_b_wq_nonlocal_sub_basin_nsb + sigma_b_wq_nonlocal_sub_basin_nsb*draws_wq_nonlocal_sub_basin_nsb
+  
+  randcoeff[["b_asc_home_prov_share"]] =  mu_b_home_prov_share + sigma_b_home_prov_share*draws_home_prov_share
+  
+
   return(randcoeff)
 }
 
@@ -162,23 +151,22 @@ apollo_probabilities = function(apollo_beta, apollo_inputs, functionality = "est
   # Define utilities
   V = list()
   V[["policy"]]  = b_asc + 
-    b_asc_shared_bound*SHARED_BOADER_PROV +
-    b_asc_home_provshare*HOME_PROV_SHARE +
-    b_asc_local_adjacent*LOCAL_ADJUCENT +
-    b_asc_rectrip*REC_TRIP +
-    b_asc_rectrip_choice*REC_IN_CHOICE_BASIN +
     b_cost *COST + 
     b_wq_local_basin*WQ_BASIN_LOCAL_POLICY +
     b_wq_nonlocal_basin*WQ_BASIN_NL_POLICY +
-    b_wq_local_sub_basin*WQ_SUBBASIN_LOCAL_POLICY_SUBONLY +
-    b_wq_nonlocal_sub_basin*WQ_SUBBASIN_NL_POLICY_SUBONLY
-  
-  
+    b_wq_local_sub_basin_sb*WQ_SUBBASIN_LOCAL_SB_POLICY+
+    b_wq_local_sub_basin_nsb*WQ_SUBBASIN_LOCAL_NSB_POLICY+
+    b_wq_nonlocal_sub_basin_sb*WQ_SUBBASIN_NONLOCAL_SB_POLICY+
+    b_wq_nonlocal_sub_basin_nsb*WQ_SUBBASIN_NONLOCAL_NSB_POLICY+
+    b_asc_home_prov_share*HOME_PROV_SHARE
+
   V[["opt_out"]] = 
     b_wq_local_basin*WQ_BASIN_LOCAL_CURRENT +
     b_wq_nonlocal_basin*WQ_BASIN_NL_CURRENT +
-    b_wq_local_sub_basin*WQ_SUBBASIN_LOCAL_CURRENT_SUBONLY+
-    b_wq_nonlocal_sub_basin*WQ_SUBBASIN_NL_CURRENT_SUBONLY
+    b_wq_local_sub_basin_sb*WQ_SUBBASIN_LOCAL_SB_CURRENT+
+    b_wq_local_sub_basin_nsb*WQ_SUBBASIN_LOCAL_NSB_CURRENT+
+    b_wq_nonlocal_sub_basin_sb*WQ_SUBBASIN_NONLOCAL_SB_CURRENT+
+    b_wq_nonlocal_sub_basin_nsb*WQ_SUBBASIN_NONLOCAL_NSB_CURRENT
   
   
   # Define MNL settings

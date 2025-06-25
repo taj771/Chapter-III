@@ -82,7 +82,34 @@ df <- st_read("/Users/tharakajayalath/Library/CloudStorage/OneDrive-Universityof
     
     TRUE ~ NA_character_  # Otherwise, assign 0
   ))%>%
+  
   mutate(WQ_V2 = case_when(
+    WSCSDA_E == "Qu'Appelle" ~ "Level 4", 
+    WSCSDA_E == "Assiniboine" ~ "Level 4", 
+    WSCSDA_E == "Souris" ~ "Level 4", 
+    WSCSDA_E == "Red" ~ "Level 4", 
+    
+    WSCSDA_E == "Grass and Burntwood River Basin" ~ "Level 5", 
+    WSCSDA_E == "Nelson River Basin" ~ "Level 3", 
+    WSCSDA_E == "Saskatchewan River Basin" ~ "Level 4", 
+    WSCSDA_E == "Eastern Lake Winnipeg River Basin" ~ "Level 3", 
+    WSCSDA_E == "Lake Winnipegosis and Lake Manitoba River Basin" ~ "Level 4", 
+    WSCSDA_E == "Western Lake Winnipeg River Basin" ~ "Level 5", 
+    
+    WSCSDA_E == "Central North Saskatchewan Sub River Basin" ~ "Level 4", 
+    WSCSDA_E == "Upper North Saskatchewan Sub River Basin" ~ "Level 3", 
+    WSCSDA_E == "Battle Sub River Basin" ~ "Level 5", 
+    WSCSDA_E == "Lower North Saskatchewan Sub River Basin" ~ "Level 3", 
+    
+    WSCSDA_E == "Bow Sub River Basin" ~ "Level 3", 
+    WSCSDA_E == "Red Deer Sub River Basin" ~ "Level 4", 
+    WSCSDA_E == "Lower South Saskatchewan Sub River Basin" ~ "Level 4", 
+    WSCSDA_E == "Upper South Saskatchewan Sub River Basin" ~ "Level 4", 
+    
+    TRUE ~ NA_character_  # Otherwise, assign 0
+  ))%>%
+  
+  mutate(WQ_V3 = case_when(
     WSCSDA_E == "Qu'Appelle" ~ "Level 2", 
     WSCSDA_E == "Assiniboine" ~ "Level 2", 
     WSCSDA_E == "Souris" ~ "Level 2", 
@@ -106,8 +133,82 @@ df <- st_read("/Users/tharakajayalath/Library/CloudStorage/OneDrive-Universityof
     WSCSDA_E == "Upper South Saskatchewan Sub River Basin" ~ "Level 3", 
     
     TRUE ~ NA_character_  # Otherwise, assign 0
+  ))%>%
+  
+  mutate(WQ_V4 = case_when(
+    WSCSDA_E == "Qu'Appelle" ~ "Level 3", 
+    WSCSDA_E == "Assiniboine" ~ "Level 3", 
+    WSCSDA_E == "Souris" ~ "Level 3", 
+    WSCSDA_E == "Red" ~ "Level 3", 
+    
+    WSCSDA_E == "Grass and Burntwood River Basin" ~ "Level 3", 
+    WSCSDA_E == "Nelson River Basin" ~ "Level 2", 
+    WSCSDA_E == "Saskatchewan River Basin" ~ "Level 2", 
+    WSCSDA_E == "Eastern Lake Winnipeg River Basin" ~ "Level 2", 
+    WSCSDA_E == "Lake Winnipegosis and Lake Manitoba River Basin" ~ "Level 2", 
+    WSCSDA_E == "Western Lake Winnipeg River Basin" ~ "Level 5", 
+    
+    WSCSDA_E == "Central North Saskatchewan Sub River Basin" ~ "Level 2", 
+    WSCSDA_E == "Upper North Saskatchewan Sub River Basin" ~ "Level 1", 
+    WSCSDA_E == "Battle Sub River Basin" ~ "Level 3", 
+    WSCSDA_E == "Lower North Saskatchewan Sub River Basin" ~ "Level 1", 
+    
+    WSCSDA_E == "Bow Sub River Basin" ~ "Level 1", 
+    WSCSDA_E == "Red Deer Sub River Basin" ~ "Level 3", 
+    WSCSDA_E == "Lower South Saskatchewan Sub River Basin" ~ "Level 3", 
+    WSCSDA_E == "Upper South Saskatchewan Sub River Basin" ~ "Level 3", 
+    
+    TRUE ~ NA_character_  # Otherwise, assign 0
+  ))%>%
+
+  
+  mutate(WQ_FINAL = case_when(
+    WSCSDA_E == "Qu'Appelle" ~ "Level 3", 
+    WSCSDA_E == "Assiniboine" ~ "Level 3", 
+    WSCSDA_E == "Souris" ~ "Level 3", 
+    WSCSDA_E == "Red" ~ "Level 3", 
+    
+    WSCSDA_E == "Grass and Burntwood River Basin" ~ "Level 4", 
+    WSCSDA_E == "Nelson River Basin" ~ "Level 3", 
+    WSCSDA_E == "Saskatchewan River Basin" ~ "Level 3.5", 
+    WSCSDA_E == "Eastern Lake Winnipeg River Basin" ~ "Level 3", 
+    WSCSDA_E == "Lake Winnipegosis and Lake Manitoba River Basin" ~ "Level 3", 
+    WSCSDA_E == "Western Lake Winnipeg River Basin" ~ "Level 5", 
+    
+    WSCSDA_E == "Central North Saskatchewan Sub River Basin" ~ "Level 2", 
+    WSCSDA_E == "Upper North Saskatchewan Sub River Basin" ~ "Level 2", 
+    WSCSDA_E == "Battle Sub River Basin" ~ "Level 3", 
+    WSCSDA_E == "Lower North Saskatchewan Sub River Basin" ~ "Level 2.5", 
+    
+    WSCSDA_E == "Bow Sub River Basin" ~ "Level 1", 
+    WSCSDA_E == "Red Deer Sub River Basin" ~ "Level 2", 
+    WSCSDA_E == "Lower South Saskatchewan Sub River Basin" ~ "Level 3.75", 
+    WSCSDA_E == "Upper South Saskatchewan Sub River Basin" ~ "Level 3.75", 
+    
+    TRUE ~ NA_character_  # Otherwise, assign 0
   ))
 
+  
+
+df_version_wq <- df%>%
+  select(WSCSDA_E,name_code,WQ_V1,WQ_V2,WQ_V3,WQ_V4)%>%
+  mutate(WQ_V1 = as.numeric(str_remove(WQ_V1, "^Level")))%>%
+  mutate(WQ_V2 = as.numeric(str_remove(WQ_V2, "^Level")))%>%
+  mutate(WQ_V3 = as.numeric(str_remove(WQ_V3, "^Level")))%>%
+  mutate(WQ_V4 = as.numeric(str_remove(WQ_V4, "^Level")))%>%
+  mutate(AVE_WQ = (WQ_V1+WQ_V2+WQ_V3+WQ_V4)/4)%>%
+  as.data.frame()%>%
+  select(-geometry)
+
+
+write_csv(df_version_wq, "./Deriveddata/Baseline_WQ_sub_basin.csv")
+
+
+
+WQ_level_summary <- df_version_wq %>%
+  group_by(AVE_WQ) %>%
+  summarize(n = n()) %>%
+  mutate(percent = round(100 * n / sum(n), 1))
 
 
 
@@ -203,4 +304,4 @@ p2 <- tm_shape(df, crs = 3347) +
 tmap_save(p2, filename = "Figures/subbasin_wq_v2_map.png", width = 10, height = 8, units = "in", dpi = 300)
 
 
-st_write(df, "/Users/tharakajayalath/Library/CloudStorage/OneDrive-UniversityofSaskatchewan/Chapter III-UseNonUseValue/Survey/Shapefile/study_area_map_with_WQ.shp")
+st_write(df, "/Users/tharakajayalath/Library/CloudStorage/OneDrive-UniversityofSaskatchewan/Chapter III-UseNonUseValue/Survey/Shapefile/study_area_map_with_WQ.shp", delete_dsn = T)

@@ -41,6 +41,8 @@ cities_in_study_area <- st_join(cities, study_area, join = st_within)
 
 water_sk <- st_read("/Users/tharakajayalath/Library/CloudStorage/OneDrive-UniversityofSaskatchewan/Chapter III-UseNonUseValue/Survey/Shapefile/saskatchewan-latest-free/gis_osm_water_a_free_1.shp")
 
+waterways_sk <- st_read("/Users/tharakajayalath/Library/CloudStorage/OneDrive-UniversityofSaskatchewan/Chapter III-UseNonUseValue/Survey/Shapefile/saskatchewan-latest-free/gis_osm_waterways_free_1.shp")
+
 
 tm_shape(water_sk)+
   tm_borders(col = "black", lwd = 2)
