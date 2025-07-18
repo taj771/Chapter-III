@@ -1,0 +1,754 @@
+---
+title: "Exploratory summaries/visualizations"
+author: "TJ"
+format: pdf
+editor: visual
+execute:
+  echo: false    # Hides all code globally
+  warning: false # Suppresses all warnings globally
+---
+
+## Description
+
+# This code results some exploratory summaries/visualizations graphs that use to assess the results in pilot survey data
+
+```{r,echo=FALSE, warning=FALSE, message=FALSE}
+# Clean the memory
+rm(list = ls())  # Removes all objects in the environment
+
+library(readr)
+library(dplyr)
+library(apollo)
+library(ggplot2)
+library(officer)
+library(flextable)
+library(tidyr)
+library(haven)
+library(here)
+library(grid)
+library(ggtext)
+library(knitr)
+```
+
+1.  **Vote count % at different bid levels**
+
+```{r,echo=FALSE, warning=FALSE, message=FALSE}
+
+df <- read_csv(here("Deriveddata", "processed_finaldata_batch_1_Apollo.csv"))
+
+
+# 1. Vote count % at different bid levels
+df1 <- df%>%
+  select(COST,VOTE)
+
+
+df_summary <- df1 %>%
+  group_by(COST) %>%
+  summarize(
+    Percent_1 = sum(VOTE == 1) / n() * 100,
+    Percent_0 = sum(VOTE == 0) / n() * 100
+  )
+
+df_long <- df_summary %>%
+  pivot_longer(cols = starts_with("Percent"), names_to = "Vote", values_to = "Percentage") %>%
+  mutate(Vote = ifelse(Vote == "Percent_1", "1", "0"))
+
+ggplot(df_long, aes(x = factor(COST), y = Percentage, fill = Vote)) +
+  geom_bar(stat = "identity", position = "dodge") +  # Add position = "dodge" for side-by-side bars
+  labs(
+    title = "",
+    x = "Bid Level",
+    y = "Percentage (%)",
+    fill = "Vote"
+  ) +
+  theme_minimal()+
+  scale_fill_manual(
+    values = c("0" = "lightblue", "1" = "maroon"),          # Assign colors
+    labels = c("0" = "No Vote", "1" = "Yes Vote")   # Rename legend elements
+  ) +
+  theme(
+    panel.grid = element_blank(),                   # Remove grid lines
+    axis.line = element_line(size = 0.8, color = "black"),  # Add main axes
+    axis.ticks = element_line(size = 0.8, color = "black"), # Add tick marks
+    axis.ticks.length = unit(5, "pt"),              # Length of tick marks
+    legend.position = "bottom",
+    legend.title = element_blank()
+  ) 
+
+```
+
+2.  **Vote count % at different bid levels in a summary table**
+
+```{r,echo=FALSE,warning=FALSE, message=FALSE}
+
+df_summary <- df1 %>%
+  group_by(COST) %>%
+  summarize(
+    `Yes count` = sum(VOTE == 1),  # Count of votes equal to 1
+    `No count` = sum(VOTE == 0),  # Count of votes equal to 0
+    `Total Votes` = n(),         # Total number of votes
+    `Yes (%)` = (`Yes count` / `Total Votes`) * 100,  # Percentage of votes equal to 1
+    `No (%)` = (`No count` / `Total Votes`) * 100   # Percentage of votes equal to 0
+  )
+
+# Convert the dataframe to a flextable
+#table <- flextable(df_summary)
+
+
+kable(df_summary, caption = "Summary of vote counts", format = "html")
+
+
+#print(table)
+
+```
+
+3a. **Percentage of Age Brackets Across Groups: Movies, Politics, and Environment**
+
+```{r,echo=FALSE,warning=FALSE, message=FALSE}
+
+df <- read_sav("~/Library/CloudStorage/OneDrive-UniversityofSaskatchewan/Chapter III-UseNonUseValue/R Project/Chapter-III/Rawdata//Water_Quality.sav 2")  # Adjusted filename
+
+#df <- read_sav("./Rawdata/Water_Quality.sav 2")
+
+df1 <- df%>%
+  select(CaseId,AGE, GENDER, INCOME)%>%
+  mutate(age = case_when(AGE ==1 ~ "18 to 24 years",
+                         AGE ==2 ~ "25 to 29 years",
+                         AGE ==3 ~ "30 to 34 year",
+                         AGE ==4 ~ "35 to 39 years",
+                         AGE ==5 ~ "40 to 44 years",
+                         AGE ==6 ~ "45 to 49 years",
+                         AGE ==7 ~ "50 to 54 years",
+                         AGE ==8 ~ "55 to 59 years",
+                         AGE ==9 ~ "60 to 64 years",
+                         AGE ==10 ~ "65 to 69 years",
+                         AGE ==11 ~ "70 to 74 years",
+                         AGE ==12 ~ "75 to 79 years",
+                         AGE ==13 ~ "80 to 84 years",
+                         AGE ==14 ~ "85 years and older",
+                         TRUE ~ NA_character_ ))%>%
+  mutate(gender = case_when(GENDER ==1 ~ "Male",
+                            GENDER ==2 ~ "Female",
+                            GENDER ==3 ~ "Other",
+                            TRUE ~ NA_character_ ))%>%
+  mutate(income = case_when(INCOME ==0 ~ "Under $10,000",
+                            INCOME ==1 ~ "$10,000 to $19,999",
+                            INCOME ==2 ~ "$20,000 to $29,999",
+                            INCOME ==3 ~ "$30,000 to $39,999",
+                            INCOME ==4 ~ "$40,000 to $49,999",
+                            INCOME ==5 ~ "$50,000 to $59,999",
+                            INCOME ==6 ~ "$60,000 to $69,999",
+                            INCOME ==7 ~ "$70,000 to $79,999",
+                            INCOME ==8 ~ "$80,000 to $89,999",
+                            INCOME ==9 ~ "$90,000 to $99,999",
+                            INCOME ==10 ~ "$100,000 to $124,999",
+                            INCOME ==11 ~ "$125,000 to $149,999",
+                            INCOME ==12 ~ "$150,000 and over",
+                            TRUE ~ NA_character_ 
+                            
+  ))
+
+
+# Calculate percentages
+age_percentages <- df1 %>%
+  filter(!is.na(age)) %>%
+  count(age) %>%
+  mutate(percentage = n / sum(n) * 100)
+
+ggplot(age_percentages, aes(x = factor(age), y = percentage)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.8),width = 0.5) +  # Dodge for side-by-side bars
+  labs(x = "", y = "Percentage (%)", title = "") +
+  scale_x_discrete(labels = c("1" = "Strongly agree", "2" = "Agree", "3" = "Unsure", "4" = "Disagree", "5" = "Strongly disagree")) +
+  scale_fill_manual(values = c("Movies" = "darkblue", "Politics" = "maroon", "Environment" = "darkgreen")) +
+  theme_minimal() +  # Apply theme_minimal() once
+  theme(
+    legend.position = "bottom",  # Place the legend at the bottom
+    legend.title = element_blank(),  # Remove the legend title if not needed
+    legend.text = element_text(size = 8),
+    axis.text = element_text(size = 9),  # Adjust axis text size
+    axis.title = element_text(size = 8),  # Adjust axis title size
+    panel.grid.major = element_blank(),  # Remove major grid lines
+    panel.grid.minor = element_blank(),  # Remove minor grid lines
+    axis.title.x = element_blank(),  # Remove the x-axis label
+    axis.text.x = element_text(angle = 90, hjust = 1, size = 8),  # Rotate x-axis labels
+    axis.ticks.x = element_blank(),  # Remove x-axis ticks
+    axis.line = element_line(),  # Keep axis lines visible
+    plot.title = element_text(size = 8),
+    legend.key.size = unit(0.2, "cm")  # Change the size of the legend marks (adjust the unit size as needed)
+  )+
+  scale_y_continuous(
+    breaks = seq(0, 100, by = 5),  # Set y-axis breaks
+    labels = seq(0, 100, by = 5),  # Set y-axis labels
+    limits = c(0, 25)  # Set y-axis limits (optional)
+  )
+
+
+```
+
+3b. **Percentage of Gender Across Groups: Movies, Politics, and Environment**
+
+```{r,echo=FALSE,warning=FALSE, message=FALSE}
+
+# Calculate percentages = Movies - gender
+gender <- df1 %>%
+  filter(!is.na(gender)) %>%
+  count(gender) %>%
+  mutate(percentage = n / sum(n) * 100)
+
+
+
+ggplot(gender, aes(x = factor(gender), y = percentage)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.8),width = 0.4) +  # Dodge for side-by-side bars
+  labs(x = "", y = "Percentage (%)", title = "") +
+  scale_x_discrete(labels = c("1" = "Strongly agree", "2" = "Agree", "3" = "Unsure", "4" = "Disagree", "5" = "Strongly disagree")) +
+  scale_fill_manual(values = c("Movies" = "darkblue", "Politics" = "maroon", "Environment" = "darkgreen")) +
+  theme_minimal() +  # Apply theme_minimal() once
+  theme(
+    legend.position = "bottom",  # Place the legend at the bottom
+    legend.title = element_blank(),  # Remove the legend title if not needed
+    legend.text = element_text(size = 8),
+    axis.text = element_text(size = 9),  # Adjust axis text size
+    axis.title = element_text(size = 8),  # Adjust axis title size
+    panel.grid.major = element_blank(),  # Remove major grid lines
+    panel.grid.minor = element_blank(),  # Remove minor grid lines
+    axis.title.x = element_blank(),  # Remove the x-axis label
+    axis.text.x = element_text(hjust = 1, size = 8),  # Rotate x-axis labels
+    axis.ticks.x = element_blank(),  # Remove x-axis ticks
+    axis.line = element_line(),  # Keep axis lines visible
+    plot.title = element_text(size = 8),
+    legend.key.size = unit(0.2, "cm")  # Change the size of the legend marks (adjust the unit size as needed)
+  )+
+  scale_y_continuous(
+    breaks = seq(0, 100, by = 10),  # Set y-axis breaks
+    labels = seq(0, 100, by = 10),  # Set y-axis labels
+    limits = c(0, 70)  # Set y-axis limits (optional)
+  )
+```
+
+3c. **Percentage of Income Brackets Across Groups: Movies, Politics, and Environment**
+
+```{r,echo=FALSE,warning=FALSE, message=FALSE}
+
+# Calculate percentages = Movies - Income
+income <- df1%>%
+  filter(!is.na(income)) %>%
+  count(income) %>%
+  mutate(percentage = n / sum(n) * 100)%>%
+  mutate(type = "Movies")
+
+
+# Define the desired order (replace with your actual categories)
+desired_order <- c("Under $10,000",
+"$10,000 to $19,999",
+"$20,000 to $29,999",
+"$30,000 to $39,999",
+"$40,000 to $49,999",
+"$50,000 to $59,999",
+"$60,000 to $69,999",
+"$70,000 to $79,999",
+"$80,000 to $89,999",
+"$90,000 to $99,999",
+"$100,000 to $124,999",
+"$125,000 to $149,999",
+"$150,000 and over")  # Example; adjust to your data
+
+# Convert 'income' to a factor with custom levels
+income$income <- factor(income$income, levels = desired_order)
+
+ggplot(income, aes(x = factor(income), y = percentage)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.8),width = 0.5) +  # Dodge for side-by-side bars
+  labs(x = "", y = "Percentage (%)", title = "") +
+  theme_minimal() +  # Apply theme_minimal() once
+  theme(
+    legend.position = "bottom",  # Place the legend at the bottom
+    legend.title = element_blank(),  # Remove the legend title if not needed
+    legend.text = element_text(size = 8),
+    axis.text = element_text(size = 9),  # Adjust axis text size
+    axis.title = element_text(size = 8),  # Adjust axis title size
+    panel.grid.major = element_blank(),  # Remove major grid lines
+    panel.grid.minor = element_blank(),  # Remove minor grid lines
+    axis.title.x = element_blank(),  # Remove the x-axis label
+    axis.text.x = element_text(angle = 90, hjust = 1, size = 8),  # Rotate x-axis labels
+    axis.ticks.x = element_blank(),  # Remove x-axis ticks
+    axis.line = element_line(),  # Keep axis lines visible
+    plot.title = element_text(size = 8),
+    legend.key.size = unit(0.2, "cm")  
+  )+
+  scale_y_continuous(
+    breaks = seq(0, 100, by = 5),  # Set y-axis breaks
+    labels = seq(0, 100, by = 5),  # Set y-axis labels
+    limits = c(0, 20)  # Set y-axis limits 
+  )
+
+```
+
+4 ***Q12. Please think about why you voted the way you did for the proposals.***
+
+Alternative Keys:
+
+A1 -I voted as if my household would face the stated cost
+
+A2 - I am certain that it I voted the same way I would if I were voting in a public election
+
+A3 - I voted on each proposal without any consideration of the other proposals
+
+A4 - I voted as if the policies would achieve the stated improvements in water quality
+
+A5 - I voted as if the information collected in this survey will be used to inform policy makers
+
+```{r,echo=FALSE,warning=FALSE, message=FALSE}
+
+df3 <- df %>%
+  select(Q12_WHY_VOTED_A1, Q12_WHY_VOTED_A2, Q12_WHY_VOTED_A3, Q12_WHY_VOTED_A4, Q12_WHY_VOTED_A5) %>%
+  rename(A1=Q12_WHY_VOTED_A1,
+         A2=Q12_WHY_VOTED_A2,
+         A3=Q12_WHY_VOTED_A3,
+         A4=Q12_WHY_VOTED_A4,
+         A5=Q12_WHY_VOTED_A5)%>%
+  mutate(across(everything(), as.character)) %>%
+  gather(key = "column", value = "value", A1,A2,A3,A4,A5) %>%
+  group_by(column, value) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  group_by(column) %>%
+  mutate(percentage = count / sum(count) * 100) %>%
+  ungroup()
+
+# Make sure that NA is included in the factor levels
+df3$value <- factor(df3$value, levels = c("1", "2", "3", "NA"))
+
+
+
+# Create a bar plot based on the output with legend
+
+ggplot(df3, aes(x = value, y = percentage, fill = value)) +
+  geom_bar(stat = "identity", position = "dodge",width = 0.3) +  # "dodge" for side-by-side bars
+  facet_wrap(~ column,ncol = 5) +  # Facet by 'column' to create separate plots for each
+  labs(
+    title = "",
+    y = "Percentage (%)",
+    fill = "Response Value"  # Rename the legend here
+  ) +
+  scale_fill_manual(
+    values = c("1" = "darkred", "2" = "yellow2", "3" = "green4", "NA" = "gray"),  # Customize colors
+    labels = c("1" = "Disagree", "2" = "Neutral", "3" = "Agree", "NA" = "No Response")  # Rename the legend items
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "bottom",  # Place the legend at the bottom
+    legend.title = element_blank(),  # Remove the legend title if not needed
+    axis.text = element_text(size = 8),  # Adjust axis text size
+    axis.title = element_text(size = 8),  # Adjust axis title size
+    panel.grid.major = element_blank(),  # Remove major grid lines
+    panel.grid.minor = element_blank(),  # Remove minor grid lines
+    axis.title.x = element_blank(),  # Remove the x-axis label
+    axis.text.x = element_blank(),  # Remove x-axis text
+    axis.ticks.x = element_blank(),  # Remove x-axis ticks
+    axis.line = element_line(),  # Keep axis lines visible
+    legend.key.size = unit(0.2, "cm")
+  )+
+  scale_y_continuous(
+    breaks = seq(0, 100, by = 10),  # Set y-axis breaks
+    labels = seq(0, 100, by = 10),  # Set y-axis labels
+    limits = c(0, 60)  # Set y-axis limits (optional)
+  )
+
+
+```
+
+4 ***Q13. When deciding whether to vote yes or no on the water quality proposals, how much did each of the policy features influence your votes?***
+
+Alternative Keys:
+
+A1: The cost of the policy in additional taxes
+
+A2: The size of the region affected by the policy
+
+A3: Whether the policy improved water quality near my home
+
+A4: Improvements in the water quality level
+
+```{r,echo=FALSE,warning=FALSE, message=FALSE}
+df4 <- df %>%
+  select(Q13_POLICY_INFLUENCE_A1,Q13_POLICY_INFLUENCE_A2,Q13_POLICY_INFLUENCE_A3,Q13_POLICY_INFLUENCE_A4) %>%
+  rename(A1=Q13_POLICY_INFLUENCE_A1,
+         A2=Q13_POLICY_INFLUENCE_A2,
+         A3=Q13_POLICY_INFLUENCE_A3,
+         A4=Q13_POLICY_INFLUENCE_A4)%>%
+  mutate(across(everything(), as.character)) %>%
+  gather(key = "column", value = "value", A1,A2,A3,A4) %>%
+  group_by(column, value) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  group_by(column) %>%
+  mutate(percentage = count / sum(count) * 100) %>%
+  ungroup()
+
+ggplot(df4, aes(x = value, y = percentage, fill = value)) +
+  geom_bar(stat = "identity", position = "dodge",width = 0.3) +  # "dodge" for side-by-side bars
+  facet_wrap(~ column,ncol = 5) +  # Facet by 'column' to create separate plots for each
+  labs(
+    title = "",
+    y = "Percentage (%)",
+    fill = "Response Value"  # Rename the legend here
+  ) +
+  scale_fill_manual(
+    values = c("1" = "darkred", "2" = "yellow2", "3" = "green4", "NA" = "gray"),  # Customize colors
+    labels = c("1" = "Little or ni effect", "2" = "Moderate effect", "3" = "Large effect", "NA" = "No Response")  # Rename the legend items
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "bottom",  # Place the legend at the bottom
+    legend.title = element_blank(),  # Remove the legend title if not needed
+    axis.text = element_text(size = 8),  # Adjust axis text size
+    axis.title = element_text(size = 8),  # Adjust axis title size
+    panel.grid.major = element_blank(),  # Remove major grid lines
+    panel.grid.minor = element_blank(),  # Remove minor grid lines
+    axis.title.x = element_blank(),  # Remove the x-axis label
+    axis.text.x = element_blank(),  # Remove x-axis text
+    axis.ticks.x = element_blank(),  # Remove x-axis ticks
+    axis.line = element_line(),  # Keep axis lines visible
+    legend.key.size = unit(0.2, "cm")
+  )+
+  scale_y_continuous(
+    breaks = seq(0, 100, by = 10),  # Set y-axis breaks
+    labels = seq(0, 100, by = 10),  # Set y-axis labels
+    limits = c(0, 60)  # Set y-axis limits (optional)
+  )
+
+
+
+```
+
+5.  ***Q14.How certain are you about your votes on the water quality proposals?***
+
+```{r,echo=FALSE,warning=FALSE, message=FALSE}
+
+df5 <- df %>%
+  select(Q14_CERTAIN)%>%
+  mutate(across(everything(), as.character)) %>%
+  gather(key = "column", value = "value",Q14_CERTAIN) %>%
+  group_by(column, value) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  group_by(column) %>%
+  mutate(percentage = count / sum(count) * 100) %>%
+  ungroup()
+
+
+ggplot(df5, aes(x = value, y = percentage, fill = value)) +
+  geom_bar(stat = "identity", position = "dodge",width = 0.3) +  # "dodge" for side-by-side bars
+  labs(
+    title = "",
+    y = "Percentage (%)",
+    fill = "Response Value"  # Rename the legend here
+  ) +
+  scale_fill_manual(
+    values = c("1" = "darkred", "2" = "yellow2", "3" = "green4", "4" = "blue4", "NA" = "gray"),  # Customize colors
+    labels = c("1" = "Uncertain", "2" = "Somewhat Uncertain", "3" = "Somewhat certain","4"="Certain", "NA" = "No Response")  # Rename the legend items
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "bottom",  # Place the legend at the bottom
+    legend.title = element_blank(),  # Remove the legend title if not needed
+    axis.text = element_text(size = 8),  # Adjust axis text size
+    axis.title = element_text(size = 8),  # Adjust axis title size
+    panel.grid.major = element_blank(),  # Remove major grid lines
+    panel.grid.minor = element_blank(),  # Remove minor grid lines
+    axis.title.x = element_blank(),  # Remove the x-axis label
+    axis.text.x = element_blank(),  # Remove x-axis text
+    axis.ticks.x = element_blank(),  # Remove x-axis ticks
+    axis.line = element_line(),  # Keep axis lines visible
+    legend.key.size = unit(0.2, "cm")
+  )+
+  scale_y_continuous(
+    breaks = seq(0, 100, by = 10),  # Set y-axis breaks
+    labels = seq(0, 100, by = 10),  # Set y-axis labels
+    limits = c(0, 60)  # Set y-axis limits
+  )
+
+```
+
+6.  ***Q15. To learn more about your general thoughts towards the water quality proposals you voted on, please select all statements that apply to you.***
+
+Alternative Keys:
+
+CH1 : I believe that new polices are important for well-being of people.
+
+CH2 : I am not worried about water quality.
+
+CH3 : I believe that new policies are important for the well-being of wildlife and plants.
+
+CH4 : I did not read the information on the proposals carefully.
+
+CH5 : I did not have enough information to make comfortable decisions
+
+CH6 : I would like to see water quality improved, but I cannot afford to pay much for it
+
+CH7 : I believe that my taxes are too high already and am against any initiative that will increase taxes
+
+CH8 : I believe that funding a new water quality policy is well worth it to me
+
+CH9 : It was difficult for me to decide how to vote
+
+CH10 : Other (Please specify)
+
+```{r,echo=FALSE,warning=FALSE, message=FALSE}
+df6 <- df %>%
+  select(Q15_GENERAL_THOUGHTSM1,Q15_GENERAL_THOUGHTSM2,Q15_GENERAL_THOUGHTSM3,Q15_GENERAL_THOUGHTSM4,
+         Q15_GENERAL_THOUGHTSM5,Q15_GENERAL_THOUGHTSM6,Q15_GENERAL_THOUGHTSM7,Q15_GENERAL_THOUGHTSM8,
+         Q15_GENERAL_THOUGHTSM9,Q15_GENERAL_THOUGHTSM10)%>%
+  rename(CH1=Q15_GENERAL_THOUGHTSM1,
+         CH2=Q15_GENERAL_THOUGHTSM2,
+         CH3=Q15_GENERAL_THOUGHTSM3,
+         CH4=Q15_GENERAL_THOUGHTSM4,
+         CH5=Q15_GENERAL_THOUGHTSM5,
+         CH6=Q15_GENERAL_THOUGHTSM6,
+         CH7=Q15_GENERAL_THOUGHTSM7,
+         CH8=Q15_GENERAL_THOUGHTSM8,
+         CH9=Q15_GENERAL_THOUGHTSM9,
+         CH10=Q15_GENERAL_THOUGHTSM10)%>%
+  summarise(across(everything(), ~ sum(!is.na(.)), .names = "{col}"))%>%
+  pivot_longer(
+    cols = everything(),         # Select all columns to pivot
+    names_to = "Column",         # Name for the column with original column names
+    values_to = "NonNA_Count"    # Name for the column with counts
+  )%>%
+  mutate(Value = NonNA_Count/1297*100,
+         )
+
+df6 <- df6 %>%
+  mutate(Column = factor(Column, levels = paste0("CH", 1:10)))  # Set levels explicitly
+
+  
+ggplot(df6, aes(x = Column, y = Value)) +
+  geom_bar(stat = "identity", width = 0.4) +  # Use 'identity' to plot the actual values
+  labs(
+    title = "",
+    x = "",
+    y = "Percentage (%)"
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "none",
+    legend.title = element_blank(),  # Remove the legend title if not needed
+    axis.text = element_text(size = 8),  # Adjust axis text size
+    axis.title = element_text(size = 8),  # Adjust axis title size
+    panel.grid.major = element_blank(),  # Remove major grid lines
+    panel.grid.minor = element_blank(),  # Remove minor grid lines
+    axis.line = element_line()  # Keep axis lines visible
+  )+
+  scale_y_continuous(
+    breaks = seq(0, 100, by = 10),  # Set y-axis breaks
+    labels = seq(0, 100, by = 10),  # Set y-axis labels
+    limits = c(0, 100)  # Set y-axis limits (optional)
+  )
+
+
+
+```
+
+7.  ***Q16. Thinking about this survey and what you read, did the survey push you to vote one way or another, or did it let you make up your mind about which way to vote on the various proposals?***
+
+Alternative Keys:
+
+Choice 1: The survey pushed me to vote against new water quality proposals
+
+Choice 2: The survey let me make up my own mind
+
+Choice 3: The survey pushed me to vote in favor of new water quality proposals
+
+```{r,echo=FALSE,warning=FALSE, message=FALSE}
+df7 <- df %>%
+  select(Q16_SURVEY_VOTE_CHANGE)%>%
+  mutate(across(everything(), as.character)) %>%
+  gather(key = "column", value = "value",Q16_SURVEY_VOTE_CHANGE) %>%
+  group_by(column, value) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  group_by(column) %>%
+  mutate(percentage = count / sum(count) * 100) %>%
+  ungroup()
+
+
+ggplot(df7, aes(x = value, y = percentage, fill = value)) +
+  geom_bar(stat = "identity", position = "dodge",width = 0.3) +  # "dodge" for side-by-side bars
+  labs(
+    title = "",
+    y = "Percentage (%)",
+    fill = "Response Value"  # Rename the legend here
+  ) +
+  scale_fill_manual(
+    values = c("1" = "maroon", "2" = "darkgreen", "3" = "darkblue", "NA" = "gray"),  # Customize colors
+    labels = c("1" = "Choice 1", "2" = "Choice 2", "3" = "Choice 3","NA" = "No Response")  # Rename the legend items
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "bottom",  # Place the legend at the bottom
+    legend.title = element_blank(),  # Remove the legend title if not needed
+    axis.text = element_text(size = 12),  # Adjust axis text size
+    axis.title = element_text(size = 14),  # Adjust axis title size
+    panel.grid.major = element_blank(),  # Remove major grid lines
+    panel.grid.minor = element_blank(),  # Remove minor grid lines
+    axis.title.x = element_blank(),  # Remove the x-axis label
+    axis.text.x = element_blank(),  # Remove x-axis text
+    axis.ticks.x = element_blank(),  # Remove x-axis ticks
+    axis.line = element_line()  # Keep axis lines visible
+  )+
+  scale_y_continuous(
+    breaks = seq(0, 100, by = 10),  # Set y-axis breaks
+    labels = seq(0, 100, by = 10),  # Set y-axis labels
+    limits = c(0, 85)  # Set y-axis limits (optional)
+  )
+
+
+
+```
+
+8 ***Q17. To what extent to you agree or disagree with the following statements.***
+
+A1 : Humans have the right to modify the natural environment to suit their needs
+
+A2 : Humans are severely abusing the planet
+
+A3 : Plants and animals have the same right to exist as humans
+
+A4 : Nature is strong enough to cope with the impacts of modern industrial nations
+
+A5 : Humans were meant to rule over the rest of nature
+
+A6 : The balance of nature is very delicate and easily upset
+
+```{r,echo=FALSE,warning=FALSE, message=FALSE}
+df8 <- df %>%
+  select(SURVEY_CONTENT,Q17_A1_2,Q17_A2_2,Q17_A3_2,Q17_A4_2,Q17_A5_2,Q17_A6_2) %>%
+  rename(A1=Q17_A1_2,
+         A2=Q17_A2_2,
+         A3=Q17_A3_2,
+         A4=Q17_A4_2,
+         A5=Q17_A5_2,
+         A6=Q17_A6_2)%>%
+  mutate(across(everything(), as.character)) %>%
+  gather(key = "column", value = "value", A1,A2,A3,A4,A5, A6) %>%
+  group_by(column, value) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  group_by(column) %>%
+  mutate(percentage = count / sum(count) * 100) %>%
+  ungroup()
+
+
+# Make sure that NA is included in the factor levels
+df8$value <- factor(df8$value, levels = c("1", "2", "3","4","5","6"))
+
+
+
+# Create a bar plot based on the output with legend
+
+ggplot(df8, aes(x = value, y = percentage, fill = value)) +
+  geom_bar(stat = "identity", position = "dodge",width = 0.3) +  # "dodge" for side-by-side bars
+  facet_wrap(~ column,ncol = 3) +  # Facet by 'column' to create separate plots for each
+  labs(
+    title = "",
+    y = "Percentage (%)",
+    fill = "Response Value"  # Rename the legend here
+  ) +
+  scale_fill_manual(
+    values = c("1" = "maroon", "2" = "darkgreen", "3" = "darkblue","4"="yellow", "5"="purple4", "6" = "gray"),  # Customize colors
+    labels = c("1" = "Strongly agree", "2" = "Agree", "3" = "Unsure", "4"= "Disagree", "5"="Strongly disagree ", "NA" = "No Response")  # Rename the legend items
+  ) +
+  theme_minimal() +
+  theme(
+    legend.position = "bottom",  # Place the legend at the bottom
+    legend.title = element_blank(),  # Remove the legend title if not needed
+    legend.text = element_text(size = 8),
+    axis.text = element_text(size = 8),  # Adjust axis text size
+    axis.title = element_text(size = 8),  # Adjust axis title size
+    panel.grid.major = element_blank(),  # Remove major grid lines
+    panel.grid.minor = element_blank(),  # Remove minor grid lines
+    axis.title.x = element_blank(),  # Remove the x-axis label
+    axis.text.x = element_blank(),  # Remove x-axis text
+    axis.ticks.x = element_blank(),  # Remove x-axis ticks
+    axis.line = element_line(),  # Keep axis lines visible
+    legend.key.size = unit(0.2, "cm")  # Change the size of the legend marks (adjust the unit
+  )+
+  scale_y_continuous(
+    breaks = seq(0, 100, by = 10),  # Set y-axis breaks
+    labels = seq(0, 100, by = 10),  # Set y-axis labels
+    limits = c(0, 60)  # Set y-axis limits (optional)
+  )
+
+```
+
+9 How Q17 answers varied between groups of Environment, Movies and
+
+***Q17. To what extent to you agree or disagree with the following statements.***
+
+A1 : Humans have the right to modify the natural environment to suit their needs
+
+A2 : Humans are severely abusing the planet
+
+A3 : Plants and animals have the same right to exist as humans
+
+A4 : Nature is strong enough to cope with the impacts of modern industrial nations
+
+A5 : Humans were meant to rule over the rest of nature
+
+A6 : The balance of nature is very delicate and easily upset
+
+```{r,echo=FALSE,warning=FALSE, message=FALSE}
+
+df8 <- df %>%
+  select(SURVEY_CONTENT,Q17_A1_2,Q17_A2_2,Q17_A3_2,Q17_A4_2,Q17_A5_2,Q17_A6_2) %>%
+  rename(A1=Q17_A1_2,
+         A2=Q17_A2_2,
+         A3=Q17_A3_2,
+         A4=Q17_A4_2,
+         A5=Q17_A5_2,
+         A6=Q17_A6_2)
+
+
+
+df8 <- df8%>%
+  mutate(across(everything(), as.character)) %>%
+  gather(key = "column", value = "value", A1,A2,A3,A4,A5,A6) %>%
+  group_by(column, value) %>%
+  summarise(count = n(), .groups = "drop") %>%
+  group_by(column) %>%
+  mutate(percentage = count / sum(count) * 100) %>%
+  ungroup()
+
+
+
+
+
+df8_A <- df8%>%
+  filter(column == "A1")%>%
+  select(value,percentage)%>%
+  rename("Movies" = "percentage")
+
+
+df8 <- df8%>%
+  left_join(df8_A )
+
+
+# Create side-by-side bar plot
+ggplot(df8, aes(x = factor(value), y = percentage, fill = column)) +
+  geom_bar(stat = "identity", position = position_dodge(width = 0.8),width = 0.4) +  # Dodge for side-by-side bars
+  labs(x = "", y = "Percentage", title = "A1 : Humans have the right to modify the natural environment to suit their needs") +
+  scale_x_discrete(labels = c("1" = "Strongly agree", "2" = "Agree", "3" = "Unsure", "4" = "Disagree", "5" = "Strongly disagree")) +
+  #scale_fill_manual(values = c("Movies" = "darkblue", "Politics" = "maroon", "Environment" = "darkgreen")) +
+  theme_minimal() +  # Apply theme_minimal() once
+  theme(
+    legend.position = "bottom",  # Place the legend at the bottom
+    legend.title = element_blank(),  # Remove the legend title if not needed
+    legend.text = element_text(size = 8),
+    axis.text = element_text(size = 8),  # Adjust axis text size
+    axis.title = element_text(size = 8),  # Adjust axis title size
+    panel.grid.major = element_blank(),  # Remove major grid lines
+    panel.grid.minor = element_blank(),  # Remove minor grid lines
+    axis.title.x = element_blank(),  # Remove the x-axis label
+    axis.text.x = element_text(angle = 90, hjust = 1, size = 8),  # Rotate x-axis labels
+    axis.ticks.x = element_blank(),  # Remove x-axis ticks
+    axis.line = element_line(),  # Keep axis lines visible
+    plot.title = element_text(size = 8),
+    legend.key.size = unit(0.2, "cm")  # Change the size of the legend marks (adjust the unit size as needed)
+  )
+
+```
+

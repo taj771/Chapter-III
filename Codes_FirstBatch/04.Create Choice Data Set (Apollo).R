@@ -10,7 +10,7 @@ rm(list = ls())  # Removes all objects in the environment
 
 
 # Read raw data file from CHAISR
-df <- read_sav("./Rawdata/Water_Quality.sav")
+df <- read_sav("./Rawdata/Water_Quality.sav 2")
 
 # In original file it has create a column for each data point recorded. For example, it create separate colom for 118 block desperately 
 # along with all other relevant parameters for each block (i.e. Policy area, baseline WQ, improved WQ). SO in this portion of the code we 
@@ -47,7 +47,8 @@ df1 <- df[, grepl("COST", names(df)) |           # Original data file the name t
                      grepl("POLICY_3", names(df))|            # WQ_3 % in policy
                      grepl("POLICY_4", names(df))|            # WQ_4 % in policy
                      grepl("POLICY_5", names(df))|            # WQ_5 % in policy
-                     grepl("IMAGE_POLICY", names(df))         # image policy
+                     grepl("IMAGE_POLICY", names(df))|        # image policy
+                     grepl("LSN_B43", names(df))         # image policy
                      ]%>%
          rename(spatial_1=BASIN,
          spatial_2 = SUB_BASIN)
@@ -60,18 +61,13 @@ df1 <- df[, grepl("COST", names(df)) |           # Original data file the name t
   #mutate(B117_2POLICY_SIZE_PERCENT="6%") # this is missing filed in pilot data and Danny will fix it in final version 
 
 
-df1 <- df1%>%
-  select(-PC_32_1, -PC_LSN_NS_2) # confirmed with Danny mistake in coding and fix it in final version
-
-
 # open the data frame with corrected coloum names (05.Create_consistent_ColNmeas_for_choices.R). 
 # In original Danny has used different patents to name choices
 # I have manually brings to a consistent pattern to handle them easy
 df2 <- read_csv("./Deriveddata/corrected_colnames.csv")%>%
   select(choice_name,vaiable_name)%>%
   rename(original=choice_name,
-         new_name=vaiable_name)%>%
-  filter(original!="LSN_B12_1IMAGE_CURRENT")
+         new_name=vaiable_name)
 
 # rename the original data file name by matching the pattern
 df1 <- df1 %>%
@@ -80,8 +76,7 @@ df1 <- df1 %>%
 
 # Take only sample of data - for initial attempts later can remove this chunk
 
-df_filtered <- df1%>%
-  slice(1:1004)
+df_filtered <- df1
 
 
 # Now df_filtered data frame has all the choices with above filtered data, but most of those column are empty for 
@@ -133,6 +128,18 @@ for (i in 1:nrow(df_filtered)) {
 # Combine all the row-wise results into a single data frame. This data frame has all data in lone format
 final_df <- bind_rows(final_result)
 
+# remove image name coumns 
+
+t <- final_df%>%
+  filter(name != "SN_B43_7IMAGE_AREA",
+         name != "LSN_B43_6IMAGE_AREA",
+         name != "LSN_B43_5IMAGE_AREA",
+         name != "LSN_B43_4IMAGE_AREA",
+         name != "LSN_B43_3IMAGE_AREA",
+         name != "LSN_B12_1IMAGE_CURRENT",
+         name != "LSN_B12_1IMAGE_CURRENT",
+         name != "LSN_B43_7IMAGE_AREA"
+         )
 
 # extract block number and choice number from the choice name we created (consistent format)
 
@@ -148,7 +155,7 @@ final_df <- final_df %>%
 # extract cost variable as data frame
 df_cost <- final_df %>%
   filter(VAR_NAME == "COST") %>%
-  select(CaseId,name,CONDITION,VERSION,TREATMENT,spatial_1,spatial_2,NON_LOCAL,LOCAL_AR,value,block_number,choice_number, -VAR_NAME) %>%
+  select(CaseId,name,VERSION,TREATMENT,spatial_1,spatial_2,NON_LOCAL,LOCAL_AR,value,block_number,choice_number, -VAR_NAME) %>% # Need to add CONDITION here as this is NA valuse for all it dropped need to clarify with Danny
   select(-name) %>%
   rename(Cost = value,
          BASIN = spatial_1,
@@ -512,7 +519,7 @@ df_all <- df_choice_all %>%
     WQ_BASIN_LOCAL_POLICY = if_else(CHOICE_AREA == "BASIN" & CHOICE_LOCALITY_BASIN == "LOCAL", POLICY_AVERAGE,0),
     WQ_BASIN_NL_POLICY = if_else(CHOICE_AREA == "BASIN" & CHOICE_LOCALITY_BASIN == "NONLOCAL", POLICY_AVERAGE,0)
   )%>%
-  select(CaseId,CONDITION,TREATMENT,VERSION,BLK_NUMBER,CHOICE_NUMBER,BASIN,SUB_BASIN,NON_LOCAL,
+  select(CaseId,TREATMENT,VERSION,BLK_NUMBER,CHOICE_NUMBER,BASIN,SUB_BASIN,NON_LOCAL,
          IMAGECURRENT,IMAGEPOLICY,CURRENT_AVERAGE,POLICY_AVERAGE,
          CHOICE_AREA,CHOICE_BASIN,CHOICE_SUB_BASIN,CHOICE_LOCALITY_BASIN,CHOICE_LOCALITY_SUBBASIN,CHOICE_LOCALITY_BASIN,
          POLICY_SIZE_KM,POLICY_SIZE_PERCENT,WQ_UP1,WQ_UP2,WQ_UP3,WQ_BY1,
@@ -520,7 +527,7 @@ df_all <- df_choice_all %>%
          WQ_HOME_CURRENT,WQ_HOME_POLICY,
          WQ_SUBBASIN_LOCAL_CURRENT,WQ_SUBBASIN_NL_CURRENT,WQ_SUBBASIN_LOCAL_POLICY,WQ_SUBBASIN_NL_POLICY,
          WQ_BASIN_LOCAL_CURRENT,WQ_BASIN_NL_CURRENT,WQ_BASIN_LOCAL_POLICY,WQ_BASIN_NL_POLICY,
-         COST,VOTE1,VOTE)
+         COST,VOTE1,VOTE) # CONDITION need to add this as this dataset need to calrify with Danny
 
 ##############################################################################################################
 # In second we need to add the respondent specific data collected such as age, and data on all othe questions
@@ -768,7 +775,14 @@ df_final <- rbind(df_temp1, df_temp2) %>%
   mutate(AREA_INSTATE_LOCAL = ifelse(CHOICE_AREA == "SUBBASIN" & CHOICE_LOCALITY_SUBBASIN == "LOCAL", HOME_PROV_SHARE, AREA_INSTATE_LOCAL))%>%
   
   mutate(AREA_INSTATE_NONLOCAL = ifelse(CHOICE_AREA == "BASIN" & CHOICE_LOCALITY_BASIN == "NONLOCAL", HOME_PROV_SHARE, 0)) %>%
-  mutate(AREA_INSTATE_NONLOCAL = ifelse(CHOICE_AREA == "SUBBASIN" & CHOICE_LOCALITY_SUBBASIN == "NONLOCAL", HOME_PROV_SHARE, AREA_INSTATE_NONLOCAL))
+  mutate(AREA_INSTATE_NONLOCAL = ifelse(CHOICE_AREA == "SUBBASIN" & CHOICE_LOCALITY_SUBBASIN == "NONLOCAL", HOME_PROV_SHARE, AREA_INSTATE_NONLOCAL))%>%
+  
+  mutate(AREA_INSTATE_LOCAL_BASIN = ifelse(CHOICE_AREA == "BASIN" & CHOICE_LOCALITY_BASIN == "LOCAL", HOME_PROV_SHARE, 0),
+         AREA_INSTATE_NL_BASIN = if_else(CHOICE_AREA == "BASIN" & CHOICE_LOCALITY_BASIN == "NONLOCAL", HOME_PROV_SHARE, 0),
+         
+         AREA_INSTATE_LOCAL_SUBBASIN = ifelse(CHOICE_AREA == "SUBBASIN" & CHOICE_LOCALITY_SUBBASIN == "LOCAL", HOME_PROV_SHARE, 0),
+         AREA_INSTATE_NL_SUBBASIN = if_else(CHOICE_AREA == "SUBBASIN" & CHOICE_LOCALITY_SUBBASIN == "NONLOCAL", HOME_PROV_SHARE, 0),
+         )
 
 
 ###############################################################################
@@ -940,6 +954,27 @@ df_temp_basin <- df_final%>%
 
 df_final <- rbind(df_temp_subbasin,df_temp_basin)%>%
   arrange(CaseId)
+
+
+df_final <- df_final%>%
+  mutate(NON_LOCAL_ADJUCENT_LOCAL_BASIN = ifelse(CHOICE_AREA == "BASIN" & CHOICE_LOCALITY_BASIN == "NONLOCAL" & 
+                                                   LOCAL_ADJUCENT == 1, 1,0 ))%>%
+  mutate(NON_LOCAL_ADJUCENT_LOCAL_SUBBASIN = ifelse(CHOICE_AREA == "SUBBASIN" & CHOICE_LOCALITY_SUBBASIN == "NONLOCAL" & 
+                                                   LOCAL_ADJUCENT == 1, 1,0 ))
+
+df_final <- df_final%>%
+  mutate(WQ_NON_LOCAL_ADJUCENT_LOCAL_BASIN_CURRENT = ifelse(NON_LOCAL_ADJUCENT_LOCAL_BASIN ==1,CURRENT_AVERAGE,0),
+         WQ_NON_LOCAL_ADJUCENT_LOCAL_SUBBASIN_CURRENT = ifelse(NON_LOCAL_ADJUCENT_LOCAL_SUBBASIN ==1,wq_sub_basin_current,0),
+         WQ_NON_LOCAL_ADJUCENT_LOCAL_BASIN_POLICY = ifelse(NON_LOCAL_ADJUCENT_LOCAL_BASIN ==1,POLICY_AVERAGE,0),
+         WQ_NON_LOCAL_ADJUCENT_LOCAL_SUBBASIN_POLCIY = ifelse(NON_LOCAL_ADJUCENT_LOCAL_SUBBASIN ==1,wq_sub_basin_policy,0),
+         
+         WQ_NON_LOCAL_NOT_ADJUCENT_LOCAL_BASIN_CURRENT = ifelse(NON_LOCAL_ADJUCENT_LOCAL_BASIN ==0,CURRENT_AVERAGE,0),
+         WQ_NON_LOCAL_NOT_ADJUCENT_LOCAL_SUBBASIN_CURRENT = ifelse(NON_LOCAL_ADJUCENT_LOCAL_SUBBASIN ==0,wq_sub_basin_current,0),
+         WQ_NON_LOCAL_NOT_ADJUCENT_LOCAL_BASIN_POLICY = ifelse(NON_LOCAL_ADJUCENT_LOCAL_BASIN ==0,POLICY_AVERAGE,0),
+         WQ_NON_LOCAL_NOT_ADJUCENT_LOCAL_SUBBASIN_POLCIY = ifelse(NON_LOCAL_ADJUCENT_LOCAL_SUBBASIN ==0,wq_sub_basin_policy,0),
+         
+         
+         )
 
 
 ##############################################################################
@@ -1384,9 +1419,185 @@ df_final <- df_final%>%
   mutate(WQ_POLICY_CHOICE = ifelse(CHOICE_AREA == "SUBBASIN",wq_sub_basin_policy,WQ_POLICY_CHOICE))
   
 
+# WQ at different version - here we. measure how much unit at different versions are vary depend on worst condition
+# For instance in Qu'Appelle V1=3, V2=4, V3=2, V4=3 so the new variable coded as for folks who get V1 as 1
+# V2 as 0 (where is the wors water quality within Qu'Appelle), V3 as 2 V4 as 1
+# in this we we can always compre those version based on the worse WQ
+
+
+df_final <- df_final%>%
+  mutate(BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_1 == 1 & CHOICE_SUB_BASIN == 2 , 1, 0), #Qu'Appelle
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_2 == 1 & CHOICE_SUB_BASIN == 2 , 0, BASELINE_WQ_VARIATION),
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_3 == 1 & CHOICE_SUB_BASIN == 2 , 2, BASELINE_WQ_VARIATION),
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_4 == 1 & CHOICE_SUB_BASIN == 2 , 1, BASELINE_WQ_VARIATION),
+         
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_1 == 1 & CHOICE_SUB_BASIN == 1 , 1, BASELINE_WQ_VARIATION), #Assiniboine
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_2 == 1 & CHOICE_SUB_BASIN == 1 , 0, BASELINE_WQ_VARIATION),
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_3 == 1 & CHOICE_SUB_BASIN == 1 , 2, BASELINE_WQ_VARIATION),
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_4 == 1 & CHOICE_SUB_BASIN == 1 , 1, BASELINE_WQ_VARIATION),
+         
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_1 == 1 & CHOICE_SUB_BASIN == 4 , 1, BASELINE_WQ_VARIATION), #Souris
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_2 == 1 & CHOICE_SUB_BASIN == 4 , 0, BASELINE_WQ_VARIATION),
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_3 == 1 & CHOICE_SUB_BASIN == 4 , 2, BASELINE_WQ_VARIATION),
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_4 == 1 & CHOICE_SUB_BASIN == 4 , 1, BASELINE_WQ_VARIATION),
+         
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_1 == 1 & CHOICE_SUB_BASIN == 3 , 1, BASELINE_WQ_VARIATION), #Red
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_2 == 1 & CHOICE_SUB_BASIN == 3 , 0, BASELINE_WQ_VARIATION),
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_3 == 1 & CHOICE_SUB_BASIN == 3 , 2, BASELINE_WQ_VARIATION),
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_4 == 1 & CHOICE_SUB_BASIN == 3 , 1, BASELINE_WQ_VARIATION),
+         
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_1 == 1 & CHOICE_SUB_BASIN == 6 , 0, BASELINE_WQ_VARIATION), #Grass and Burntwood
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_2 == 1 & CHOICE_SUB_BASIN == 6 , 0, BASELINE_WQ_VARIATION),
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_3 == 1 & CHOICE_SUB_BASIN == 6 , 2, BASELINE_WQ_VARIATION),
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_4 == 1 & CHOICE_SUB_BASIN == 6 , 2, BASELINE_WQ_VARIATION),
+         
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_1 == 1 & CHOICE_SUB_BASIN == 8 , 0, BASELINE_WQ_VARIATION), #Nelson
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_2 == 1 & CHOICE_SUB_BASIN == 8 , 1, BASELINE_WQ_VARIATION),
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_3 == 1 & CHOICE_SUB_BASIN == 8 , 1, BASELINE_WQ_VARIATION),
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_4 == 1 & CHOICE_SUB_BASIN == 8 , 2, BASELINE_WQ_VARIATION),
+         
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_1 == 1 & CHOICE_SUB_BASIN == 9 , 0, BASELINE_WQ_VARIATION), #Saskatchewan
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_2 == 1 & CHOICE_SUB_BASIN == 9 , 1, BASELINE_WQ_VARIATION),
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_3 == 1 & CHOICE_SUB_BASIN == 9 , 2, BASELINE_WQ_VARIATION),
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_4 == 1 & CHOICE_SUB_BASIN == 9 , 3, BASELINE_WQ_VARIATION),
+         
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_1 == 1 & CHOICE_SUB_BASIN == 5 , 0, BASELINE_WQ_VARIATION), #Eastern Lake Winnipeg
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_2 == 1 & CHOICE_SUB_BASIN == 5 , 1, BASELINE_WQ_VARIATION),
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_3 == 1 & CHOICE_SUB_BASIN == 5 , 1, BASELINE_WQ_VARIATION),
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_4 == 1 & CHOICE_SUB_BASIN == 5 , 2, BASELINE_WQ_VARIATION),
+         
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_1 == 1 & CHOICE_SUB_BASIN == 7 , 0, BASELINE_WQ_VARIATION), #Lake Winnipegosis and Lake Manitoba
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_2 == 1 & CHOICE_SUB_BASIN == 7 , 0, BASELINE_WQ_VARIATION),
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_3 == 1 & CHOICE_SUB_BASIN == 7 , 2, BASELINE_WQ_VARIATION),
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_4 == 1 & CHOICE_SUB_BASIN == 7 , 2, BASELINE_WQ_VARIATION),
+         
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_1 == 1 & CHOICE_SUB_BASIN == 10 , 0, BASELINE_WQ_VARIATION), #Western Lake Winnipeg
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_2 == 1 & CHOICE_SUB_BASIN == 10 , 0, BASELINE_WQ_VARIATION),
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_3 == 1 & CHOICE_SUB_BASIN == 10 , 0, BASELINE_WQ_VARIATION),
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_4 == 1 & CHOICE_SUB_BASIN == 10 , 0, BASELINE_WQ_VARIATION),
+         
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_1 == 1 & CHOICE_SUB_BASIN == 12 , 0, BASELINE_WQ_VARIATION), #Central North Saskatchewan
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_2 == 1 & CHOICE_SUB_BASIN == 12 , 0, BASELINE_WQ_VARIATION),
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_3 == 1 & CHOICE_SUB_BASIN == 12 , 2, BASELINE_WQ_VARIATION),
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_4 == 1 & CHOICE_SUB_BASIN == 12 , 2, BASELINE_WQ_VARIATION),
+         
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_1 == 1 & CHOICE_SUB_BASIN == 14 , 0, BASELINE_WQ_VARIATION), #Upper North Saskatchewan
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_2 == 1 & CHOICE_SUB_BASIN == 14 , 0, BASELINE_WQ_VARIATION),
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_3 == 1 & CHOICE_SUB_BASIN == 14 , 2, BASELINE_WQ_VARIATION),
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_4 == 1 & CHOICE_SUB_BASIN == 14 , 2, BASELINE_WQ_VARIATION),
+         
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_1 == 1 & CHOICE_SUB_BASIN == 11 , 0, BASELINE_WQ_VARIATION), #Battle
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_2 == 1 & CHOICE_SUB_BASIN == 11 , 0, BASELINE_WQ_VARIATION),
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_3 == 1 & CHOICE_SUB_BASIN == 11 , 2, BASELINE_WQ_VARIATION),
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_4 == 1 & CHOICE_SUB_BASIN == 11 , 2, BASELINE_WQ_VARIATION),
+         
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_1 == 1 & CHOICE_SUB_BASIN == 13 , 0, BASELINE_WQ_VARIATION), #Lower North Saskatchewan
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_2 == 1 & CHOICE_SUB_BASIN == 13 , 1, BASELINE_WQ_VARIATION),
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_3 == 1 & CHOICE_SUB_BASIN == 13 , 2, BASELINE_WQ_VARIATION),
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_4 == 1 & CHOICE_SUB_BASIN == 13 , 3, BASELINE_WQ_VARIATION),
+         
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_1 == 1 & CHOICE_SUB_BASIN == 15 , 0, BASELINE_WQ_VARIATION), #Bow
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_2 == 1 & CHOICE_SUB_BASIN == 15 , 0, BASELINE_WQ_VARIATION),
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_3 == 1 & CHOICE_SUB_BASIN == 15 , 2, BASELINE_WQ_VARIATION),
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_4 == 1 & CHOICE_SUB_BASIN == 15 , 2, BASELINE_WQ_VARIATION),
+         
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_1 == 1 & CHOICE_SUB_BASIN == 17 , 0, BASELINE_WQ_VARIATION), #Red Deer
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_2 == 1 & CHOICE_SUB_BASIN == 17 , 0, BASELINE_WQ_VARIATION),
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_3 == 1 & CHOICE_SUB_BASIN == 17 , 1, BASELINE_WQ_VARIATION),
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_4 == 1 & CHOICE_SUB_BASIN == 17 , 1, BASELINE_WQ_VARIATION),
+         
+         
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_1 == 1 & CHOICE_SUB_BASIN == 16 , 0, BASELINE_WQ_VARIATION), #Lower South Saskatchewan
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_2 == 1 & CHOICE_SUB_BASIN == 16 , 0, BASELINE_WQ_VARIATION),
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_3 == 1 & CHOICE_SUB_BASIN == 16 , 1, BASELINE_WQ_VARIATION),
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_4 == 1 & CHOICE_SUB_BASIN == 16 , 1, BASELINE_WQ_VARIATION),
+         
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_1 == 1 & CHOICE_SUB_BASIN == 18 , 0, BASELINE_WQ_VARIATION), #Upper South Saskatchewan
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_2 == 1 & CHOICE_SUB_BASIN == 18 , 0, BASELINE_WQ_VARIATION),
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_3 == 1 & CHOICE_SUB_BASIN == 18 , 1, BASELINE_WQ_VARIATION),
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "SUBBASIN" & VERSION_4 == 1 & CHOICE_SUB_BASIN == 18 , 1, BASELINE_WQ_VARIATION),
+         
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "BASIN" & VERSION_1 == 1 & CHOICE_BASIN == 1 , 1, BASELINE_WQ_VARIATION), #AR
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "BASIN" & VERSION_2 == 1 & CHOICE_BASIN == 1 , 0, BASELINE_WQ_VARIATION),
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "BASIN" & VERSION_3 == 1 & CHOICE_BASIN == 1 , 2, BASELINE_WQ_VARIATION),
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "BASIN" & VERSION_4 == 1 & CHOICE_BASIN == 1 , 1, BASELINE_WQ_VARIATION),
+         
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "BASIN" & VERSION_1 == 1 & CHOICE_BASIN == 2 , 1, BASELINE_WQ_VARIATION), #LSN
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "BASIN" & VERSION_2 == 1 & CHOICE_BASIN == 2 , 0.52, BASELINE_WQ_VARIATION),
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "BASIN" & VERSION_3 == 1 & CHOICE_BASIN == 2 , 1.57, BASELINE_WQ_VARIATION),
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "BASIN" & VERSION_4 == 1 & CHOICE_BASIN == 2 , 2.1, BASELINE_WQ_VARIATION),
+         
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "BASIN" & VERSION_1 == 1 & CHOICE_BASIN == 3 , 0, BASELINE_WQ_VARIATION), #NS
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "BASIN" & VERSION_2 == 1 & CHOICE_BASIN == 3 , 0.33, BASELINE_WQ_VARIATION),
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "BASIN" & VERSION_3 == 1 & CHOICE_BASIN == 3 , 2, BASELINE_WQ_VARIATION),
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "BASIN" & VERSION_4 == 1 & CHOICE_BASIN == 3 , 2.33, BASELINE_WQ_VARIATION),
+         
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "BASIN" & VERSION_1 == 1 & CHOICE_BASIN == 4 , 0, BASELINE_WQ_VARIATION), #SS
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "BASIN" & VERSION_2 == 1 & CHOICE_BASIN == 4 , 0, BASELINE_WQ_VARIATION),
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "BASIN" & VERSION_3 == 1 & CHOICE_BASIN == 4 , 1.15, BASELINE_WQ_VARIATION),
+         BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "BASIN" & VERSION_4 == 1 & CHOICE_BASIN == 4 , 1.15, BASELINE_WQ_VARIATION),
+         
+         )
+         
+
+df_final <- df_final%>%
+  mutate(BASELINE_WQ_VARIATION_ROUND = round(BASELINE_WQ_VARIATION,0))%>%
+  mutate(BASELINE_WQ_0UNIT = ifelse(BASELINE_WQ_VARIATION_ROUND == 0, 1,0),
+         BASELINE_WQ_1UNIT = ifelse(BASELINE_WQ_VARIATION_ROUND == 1, 1,0),
+         BASELINE_WQ_2UNIT = ifelse(BASELINE_WQ_VARIATION_ROUND == 2, 1,0),
+         BASELINE_WQ_3UNIT = ifelse(BASELINE_WQ_VARIATION_ROUND == 3, 1,0))
+
+
+df_final <- df_final%>%
+  mutate(BASELINE_WQ_LOWEST = ifelse(BASELINE_WQ_VARIATION == 0,1,0),
+         BASELINE_WQ_0_1UNIT = ifelse(BASELINE_WQ_VARIATION >= 0.1 & BASELINE_WQ_VARIATION <= 1, 1, 0),
+         BASELINE_WQ_1_2UNIT = ifelse(BASELINE_WQ_VARIATION >= 1.1 & BASELINE_WQ_VARIATION <= 2, 1, 0),
+         BASELINE_WQ_2_3UNIT = ifelse(BASELINE_WQ_VARIATION >= 2.1 & BASELINE_WQ_VARIATION <= 3, 1, 0),
+         )
+
+
+
+
+df_final <- df_final%>%
+  mutate(WQ_BASIN_LOCAL_CURRENT_X_BASELINE_WQ_1UNIT = WQ_BASIN_LOCAL_CURRENT*BASELINE_WQ_1UNIT,
+         WQ_BASIN_NL_CURRENT_X_BASELINE_WQ_1UNIT = WQ_BASIN_NL_CURRENT*BASELINE_WQ_1UNIT,
+         WQ_SUBBASIN_LOCAL_CURRENT_SUBONLY_X_BASELINE_WQ_1UNIT = WQ_SUBBASIN_LOCAL_CURRENT_SUBONLY*BASELINE_WQ_1UNIT,
+         WQ_SUBBASIN_NL_CURRENT_SUBONLY_X_BASELINE_WQ_1UNIT = WQ_SUBBASIN_NL_CURRENT_SUBONLY*BASELINE_WQ_1UNIT,
+         
+         WQ_BASIN_LOCAL_CURRENT_X_BASELINE_WQ_2UNIT = WQ_BASIN_LOCAL_CURRENT*BASELINE_WQ_2UNIT,
+         WQ_BASIN_NL_CURRENT_X_BASELINE_WQ_2UNIT = WQ_BASIN_NL_CURRENT*BASELINE_WQ_2UNIT,
+         WQ_SUBBASIN_LOCAL_CURRENT_SUBONLY_X_BASELINE_WQ_2UNIT = WQ_SUBBASIN_LOCAL_CURRENT_SUBONLY*BASELINE_WQ_2UNIT,
+         WQ_SUBBASIN_NL_CURRENT_SUBONLY_X_BASELINE_WQ_2UNIT = WQ_SUBBASIN_NL_CURRENT_SUBONLY*BASELINE_WQ_2UNIT,
+         
+         WQ_BASIN_LOCAL_CURRENT_X_BASELINE_WQ_3UNIT = WQ_BASIN_LOCAL_CURRENT*BASELINE_WQ_3UNIT,
+         WQ_BASIN_NL_CURRENT_X_BASELINE_WQ_3UNIT = WQ_BASIN_NL_CURRENT*BASELINE_WQ_3UNIT,
+         WQ_SUBBASIN_LOCAL_CURRENT_SUBONLY_X_BASELINE_WQ_3UNIT = WQ_SUBBASIN_LOCAL_CURRENT_SUBONLY*BASELINE_WQ_3UNIT,
+         WQ_SUBBASIN_NL_CURRENT_SUBONLY_X_BASELINE_WQ_3UNIT = WQ_SUBBASIN_NL_CURRENT_SUBONLY*BASELINE_WQ_3UNIT,
+         
+         WQ_BASIN_LOCAL_POLICY_X_BASELINE_WQ_1UNIT = WQ_BASIN_LOCAL_POLICY*BASELINE_WQ_1UNIT,
+         WQ_BASIN_NL_POLICY_X_BASELINE_WQ_1UNIT = WQ_BASIN_NL_POLICY*BASELINE_WQ_1UNIT,
+         WQ_SUBBASIN_LOCAL_POLICY_SUBONLY_X_BASELINE_WQ_1UNIT = WQ_SUBBASIN_LOCAL_POLICY_SUBONLY*BASELINE_WQ_1UNIT,
+         WQ_SUBBASIN_NL_POLICY_SUBONLY_X_BASELINE_WQ_1UNIT = WQ_SUBBASIN_NL_POLICY_SUBONLY*BASELINE_WQ_1UNIT,
+         
+         WQ_BASIN_LOCAL_POLICY_X_BASELINE_WQ_2UNIT = WQ_BASIN_LOCAL_POLICY*BASELINE_WQ_2UNIT,
+         WQ_BASIN_NL_POLICY_X_BASELINE_WQ_2UNIT = WQ_BASIN_NL_POLICY*BASELINE_WQ_2UNIT,
+         WQ_SUBBASIN_LOCAL_POLICY_SUBONLY_X_BASELINE_WQ_2UNIT = WQ_SUBBASIN_LOCAL_POLICY_SUBONLY*BASELINE_WQ_2UNIT,
+         WQ_SUBBASIN_NL_POLICY_SUBONLY_X_BASELINE_WQ_2UNIT = WQ_SUBBASIN_NL_POLICY_SUBONLY*BASELINE_WQ_2UNIT,
+         
+         WQ_BASIN_LOCAL_POLICY_X_BASELINE_WQ_3UNIT = WQ_BASIN_LOCAL_POLICY*BASELINE_WQ_3UNIT,
+         WQ_BASIN_NL_POLICY_X_BASELINE_WQ_3UNIT = WQ_BASIN_NL_POLICY*BASELINE_WQ_3UNIT,
+         WQ_SUBBASIN_LOCAL_POLICY_SUBONLY_X_BASELINE_WQ_3UNIT = WQ_SUBBASIN_LOCAL_POLICY_SUBONLY*BASELINE_WQ_3UNIT,
+         WQ_SUBBASIN_NL_POLICY_SUBONLY_X_BASELINE_WQ_3UNIT = WQ_SUBBASIN_NL_POLICY_SUBONLY*BASELINE_WQ_3UNIT,
+         
+         )
+
+
+
+
+
 # Reorder columns to allingn with the order of the survey
 
-df_final <- df_final[, c( "CaseId","CONDITION","TREATMENT","VERSION","SURVEY_VERSION_1","SURVEY_VERSION_2", "VERSION_1", "VERSION_2", "VERSION_3", "VERSION_4",
+df_final <- df_final[, c( "CaseId","TREATMENT","VERSION","SURVEY_VERSION_1","SURVEY_VERSION_2", "VERSION_1", "VERSION_2", "VERSION_3", "VERSION_4", # Add CONDITION later
                           "BLK_NUMBER","CHOICE_NUMBER","BASIN","SUB_BASIN","NON_LOCAL",
                           "IMAGECURRENT","IMAGEPOLICY","CURRENT_AVERAGE","POLICY_AVERAGE",
                           "WQ_CHANGE", "BASELINE_X_WQCHANGE",
@@ -1394,7 +1605,10 @@ df_final <- df_final[, c( "CaseId","CONDITION","TREATMENT","VERSION","SURVEY_VER
                           "BASELINE_X_WQCHANGE_LOCAL_BASIN","BASELINE_X_WQCHANGE_NL_BASIN",
                           "BASELINE_X_WQCHANGE_LOCAL_SUBBASIN","BASELINE_X_WQCHANGE_NL_SUBBASIN",
                           
+                          "BASELINE_WQ_VARIATION","BASELINE_WQ_0UNIT","BASELINE_WQ_1UNIT","BASELINE_WQ_2UNIT","BASELINE_WQ_3UNIT",
                           
+                          "BASELINE_WQ_LOWEST", "BASELINE_WQ_0_1UNIT", "BASELINE_WQ_1_2UNIT", "BASELINE_WQ_2_3UNIT",
+
                           "CHOICE_AREA","CHOICE_BASIN","CHOICE_SUB_BASIN","CHOICE_LOCALITY_BASIN","CHOICE_LOCALITY_SUBBASIN",
                           "POLICY_SIZE_KM","POLICY_SIZE_PERCENT","WQ_UP1","WQ_UP2","WQ_UP3","WQ_BY1",
                           "WQ_LOCAL_CURRENT","WQ_NL_CURRENT","WQ_LOCAL_POLICY","WQ_NL_POLICY",
@@ -1416,10 +1630,53 @@ df_final <- df_final[, c( "CaseId","CONDITION","TREATMENT","VERSION","SURVEY_VER
                           
                           "WQ_CURRENT_CHOICE", "WQ_POLICY_CHOICE",
                           
+                          
+                          "WQ_BASIN_LOCAL_CURRENT_X_BASELINE_WQ_1UNIT",
+                          "WQ_BASIN_NL_CURRENT_X_BASELINE_WQ_1UNIT",
+                          "WQ_SUBBASIN_LOCAL_CURRENT_SUBONLY_X_BASELINE_WQ_1UNIT", 
+                          "WQ_SUBBASIN_NL_CURRENT_SUBONLY_X_BASELINE_WQ_1UNIT", 
+                          
+                          "WQ_BASIN_LOCAL_CURRENT_X_BASELINE_WQ_2UNIT", 
+                          "WQ_BASIN_NL_CURRENT_X_BASELINE_WQ_2UNIT", 
+                          "WQ_SUBBASIN_LOCAL_CURRENT_SUBONLY_X_BASELINE_WQ_2UNIT", 
+                          "WQ_SUBBASIN_NL_CURRENT_SUBONLY_X_BASELINE_WQ_2UNIT", 
+                          
+                          "WQ_BASIN_LOCAL_CURRENT_X_BASELINE_WQ_3UNIT", 
+                          "WQ_BASIN_NL_CURRENT_X_BASELINE_WQ_3UNIT", 
+                          "WQ_SUBBASIN_LOCAL_CURRENT_SUBONLY_X_BASELINE_WQ_3UNIT", 
+                          "WQ_SUBBASIN_NL_CURRENT_SUBONLY_X_BASELINE_WQ_3UNIT",
+                          
+                          "WQ_BASIN_LOCAL_POLICY_X_BASELINE_WQ_1UNIT", 
+                          "WQ_BASIN_NL_POLICY_X_BASELINE_WQ_1UNIT", 
+                          "WQ_SUBBASIN_LOCAL_POLICY_SUBONLY_X_BASELINE_WQ_1UNIT", 
+                          "WQ_SUBBASIN_NL_POLICY_SUBONLY_X_BASELINE_WQ_1UNIT", 
+                          
+                          "WQ_BASIN_LOCAL_POLICY_X_BASELINE_WQ_2UNIT", 
+                          "WQ_BASIN_NL_POLICY_X_BASELINE_WQ_2UNIT", 
+                          "WQ_SUBBASIN_LOCAL_POLICY_SUBONLY_X_BASELINE_WQ_2UNIT", 
+                          "WQ_SUBBASIN_NL_POLICY_SUBONLY_X_BASELINE_WQ_2UNIT", 
+                          
+                          "WQ_BASIN_LOCAL_POLICY_X_BASELINE_WQ_3UNIT", 
+                          "WQ_BASIN_NL_POLICY_X_BASELINE_WQ_3UNIT", 
+                          "WQ_SUBBASIN_LOCAL_POLICY_SUBONLY_X_BASELINE_WQ_3UNIT",
+                          "WQ_SUBBASIN_NL_POLICY_SUBONLY_X_BASELINE_WQ_3UNIT", 
+                          
                           "POLICY_SIZE_KM",
+                          
                           "HOME_PROV_SHARE",
+                          "AREA_INSTATE_LOCAL_BASIN","AREA_INSTATE_NL_BASIN",
+                          "AREA_INSTATE_LOCAL_SUBBASIN", "AREA_INSTATE_NL_SUBBASIN",
+                          
                           "AREA_INSTATE_LOCAL","AREA_INSTATE_NONLOCAL",
+                          
                           "LOCAL_ADJUCENT",
+                          "NON_LOCAL_ADJUCENT_LOCAL_BASIN",
+                          "NON_LOCAL_ADJUCENT_LOCAL_SUBBASIN",
+                          "WQ_NON_LOCAL_ADJUCENT_LOCAL_BASIN_CURRENT","WQ_NON_LOCAL_ADJUCENT_LOCAL_SUBBASIN_CURRENT",
+                          "WQ_NON_LOCAL_ADJUCENT_LOCAL_BASIN_POLICY", "WQ_NON_LOCAL_ADJUCENT_LOCAL_SUBBASIN_POLCIY",
+                          
+                          "WQ_NON_LOCAL_NOT_ADJUCENT_LOCAL_BASIN_CURRENT","WQ_NON_LOCAL_NOT_ADJUCENT_LOCAL_SUBBASIN_CURRENT",
+                          "WQ_NON_LOCAL_NOT_ADJUCENT_LOCAL_BASIN_POLICY", "WQ_NON_LOCAL_NOT_ADJUCENT_LOCAL_SUBBASIN_POLCIY",
                           
                           "COST","VOTE",
                           "UID","PROVINCE", "AGE", "GENDER", "LANGUAGE", "INCOME", "POSTALCODE",
@@ -1450,7 +1707,7 @@ df_final <- df_final[, c( "CaseId","CONDITION","TREATMENT","VERSION","SURVEY_VER
                           "Q25_WB2_NEAR_TOWN","Q25_WB3_NEAR_TOWN","Q25_WB4_NEAR_TOWN","Q25_WB5_NEAR_TOWN",
                           "COMMENTS",
                           "Q1_POLI","Q2_POLI","Q3_POLI","Q4_POLI","Q5_POLI","Q6_POLI","Q7_POLI","Q8_POLI","Q9_POLI","Q10_POLI",
-                          "Q11_POLI","Q12_POLI","Q13_POLI","Q14_POLI","Q15_POLI","Q16_POLI","Q17_POLI","Q18_POLI","Q19_POLI",
+                          "Q12_POLI","Q13_POLI","Q14_POLI","Q15_POLI","Q16_POLI","Q17_POLI","Q18_POLI","Q19_POLI",                # "Q11_POLI"
                           "Q20_POLI","Q21_POLI","Q22_POLI","Q23_POLI","Q24_POLI","Q25_POLI","Q26_POLI","Q1_MOVIE","Q2_MOVIE",
                           "Q3_MOVIE","Q4_MOVIE","Q5_MOVIE","Q6_MOVIE","Q7_MOVIE","Q8_MOVIE","Q9_MOVIE","Q10_MOVIE","Q11_MOVIE",
                           "Q12_MOVIE","Q13_MOVIE","Q14_MOVIE","Q15_MOVIE","Q16_MOVIE","Q17_MOVIE","Q18_MOVIE","Q19_MOVIE",
@@ -1466,7 +1723,7 @@ df_final <- df_final[, c( "CaseId","CONDITION","TREATMENT","VERSION","SURVEY_VER
 
 
 # Write final data frame to a csv file that can ffed into Apollo
-write.csv(df_final, "./Deriveddata/processed_pilotdata_1_Apollo.csv",row.names = FALSE)
+write.csv(df_final, "./Deriveddata/processed_finaldata_batch_1_Apollo.csv",row.names = FALSE)
 
 ###############################################################################
 
