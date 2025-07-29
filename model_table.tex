@@ -1,0 +1,53 @@
+\begin{table}[!h]
+\centering
+\caption{Model Estimation Results}
+\centering
+\fontsize{9}{11}\selectfont
+\begin{threeparttable}
+\begin{tabular}[t]{llrrr}
+\toprule
+  & Parameter & Estimate & Std. Error & \\
+\midrule
+\cellcolor{gray!10}{mu_b_asc} & \cellcolor{gray!10}{ASC (mean)} & \cellcolor{gray!10}{2.616} & \cellcolor{gray!10}{0.230} & \cellcolor{gray!10}{***}\\
+sigma_b_asc & ASC (SD) & 3.249 & 0.148 & ***\\
+\cellcolor{gray!10}{b_cost} & \cellcolor{gray!10}{Cost} & \cellcolor{gray!10}{-0.007} & \cellcolor{gray!10}{0.000} & \cellcolor{gray!10}{***}\\
+mu_b_wq_local_basin & WQ Local Basin (mean) & -1.328 & 0.164 & ***\\
+\cellcolor{gray!10}{sigma_b_wq_local_basin} & \cellcolor{gray!10}{WQ Local Basin (SD)} & \cellcolor{gray!10}{0.814} & \cellcolor{gray!10}{0.202} & \cellcolor{gray!10}{***}\\
+\addlinespace
+mu_b_wq_nonlocal_basin & WQ Non-local Basin (mean) & -0.944 & 0.108 & ***\\
+\cellcolor{gray!10}{sigma_b_wq_nonlocal_basin} & \cellcolor{gray!10}{WQ Non-local Basin (SD)} & \cellcolor{gray!10}{-0.017} & \cellcolor{gray!10}{0.032} & \cellcolor{gray!10}{}\\
+mu_b_wq_local_sub_basin & WQ Local Sub-basin (mean) & -0.836 & 0.116 & ***\\
+\cellcolor{gray!10}{sigma_b_wq_local_sub_basin} & \cellcolor{gray!10}{WQ Local Sub-basin (SD)} & \cellcolor{gray!10}{-0.006} & \cellcolor{gray!10}{0.017} & \cellcolor{gray!10}{}\\
+mu_b_wq_nonlocal_sub_basin & WQ Non-local Sub-basin (mean) & -0.551 & 0.076 & ***\\
+\addlinespace
+\cellcolor{gray!10}{sigma_b_wq_nonlocal_sub_basin} & \cellcolor{gray!10}{WQ Non-local Sub-basin (SD)} & \cellcolor{gray!10}{-0.433} & \cellcolor{gray!10}{0.095} & \cellcolor{gray!10}{***}\\
+b_asc_baseline_wq_0_1 & Baseline WQ: One unit up & -0.301 & 0.199 & \\
+\cellcolor{gray!10}{b_asc_baseline_wq_1_2} & \cellcolor{gray!10}{Baseline WQ: Two units up} & \cellcolor{gray!10}{-0.656} & \cellcolor{gray!10}{0.252} & \cellcolor{gray!10}{**}\\
+b_asc_baseline_wq_2_3 & Baseline WQ: Three units up & 0.213 & 0.338 & \\
+\cellcolor{gray!10}{b_cost_baseline_0_1} & \cellcolor{gray!10}{Cost × Baseline (One unit)} & \cellcolor{gray!10}{0.001} & \cellcolor{gray!10}{0.001} & \cellcolor{gray!10}{}\\
+\addlinespace
+b_cost_baseline_1_2 & Cost × Baseline (Two units) & 0.001 & 0.001 & \\
+\cellcolor{gray!10}{b_cost_baseline_2_3} & \cellcolor{gray!10}{Cost × Baseline (Three units)} & \cellcolor{gray!10}{-0.002} & \cellcolor{gray!10}{0.001} & \cellcolor{gray!10}{}\\
+\bottomrule
+\end{tabular}
+\begin{tablenotes}
+\item *** p<0.001, ** p<0.01, * p<0.05
+\end{tablenotes}
+\end{threeparttable}
+\end{table}
+\vspace{0.5cm}
+\begin{table}[!h]
+\centering
+\caption{Model Fit Statistics}
+\centering
+\begin{tabular}[t]{lr}
+\toprule
+Statistic & Value\\
+\midrule
+Log-likelihood & -3933.2\\
+AIC & 7900.4\\
+BIC & 8021.3\\
+Adj. \$\textbackslash{}rho\textasciicircum{}2\$ & 0.328\\
+\bottomrule
+\end{tabular}
+\end{table}

@@ -838,11 +838,47 @@ df2 <- rbind(df2_mean,df2_SE)%>%
 
 df1 <- rbind(df1,df3)
 
+
 df_model6 <- df1%>%
   left_join(df2)
 
 
+new_row <- data.frame(
+  Parameter = c(
+    "b_cost_baseline_0_1","se_b_cost_baseline_0_1",
+    "b_cost_baseline_1_2","se_b_cost_baseline_1_2",
+    "b_cost_baseline_2_3","se_b_cost_baseline_2_3",
+    
+    "b_wq_basin_x_bl_0_1", "se_b_wq_basin_x_bl_0_1",
+    "b_wq_basin_x_bl_1_2", "se_b_wq_basin_x_bl_1_2",
+    "b_wq_basin_x_bl_2_3", "se_b_wq_basin_x_bl_2_3",
+    
+    "b_wq_subbasin_x_bl_0_1", "se_b_wq_subbasin_x_bl_0_1",
+    "b_wq_subbasin_x_bl_1_2", "se_b_wq_subbasin_x_bl_1_2",
+    "b_wq_subbasin_x_bl_2_3", "se_b_wq_subbasin_x_bl_2_3",
+    
+    "b_baseline", "se_b_baseline",
+    "b_cost_x_bl", "se_b_cost_x_bl",
+    "b_wq_basin_x_bl", "se_b_wq_basin_x_bl",
+    "b_wq_sub_x_bl", "se_b_wq_sub_x_bl"
+                
+                
+                
+                
+                
+                
+                
+  ),
+  Mean = c(NA,NA, NA,NA, NA,NA,NA,NA, NA,NA, NA,NA,NA,NA, NA,NA, NA,NA, NA,NA,NA,NA, NA,NA, NA,NA),
+  Standard_Deviation = c(NA,NA, NA,NA, NA,NA,NA,NA, NA,NA, NA,NA,NA,NA, NA,NA, NA,NA,NA,NA,NA,NA, NA,NA, NA,NA)
+)
+
+
+
+
+
 df_model6 <- df_model6%>%
+  rbind(new_row )%>%
   rename(Mean_M6 = Mean,
          SE_M6 = Standard_Deviation)
 
@@ -867,7 +903,7 @@ estimates_df <- read.csv("output/Model 7_estimates.csv")%>%
 
 df3 <- estimates_df %>%
   filter(str_detect(Parameter, 
-                    "^b_cost|^b_asc_version2|^b_asc_version3|^b_asc_version4|^b_wq_x_version2|^b_wq_x_version3|^b_wq_x_version4"))%>%
+                    "^b_cost|^b_asc_baseline_wq_0_1|^b_asc_baseline_wq_1_2|^b_asc_baseline_wq_2_3|^b_cost_baseline_0_1|^b_cost_baseline_1_2|^b_cost_baseline_2_3"))%>%
   mutate(SE=round(SE, digits = 4))%>%
   rename(Mean = Estimate_with_Stars) %>%
   mutate(SE = paste("(", SE, ")", sep = ""))
@@ -929,15 +965,20 @@ df_model7 <- df1%>%
   left_join(df2)
 
 new_row <- data.frame(
-  Parameter = c("b_asc_baseline_wq_0_1","se_b_asc_baseline_wq_0_1",
-                "b_asc_baseline_wq_1_2", "se_b_asc_baseline_wq_1_2",
-                "b_asc_baseline_wq_2_3", "se_b_asc_baseline_wq_2_3"
+  Parameter = c("b_wq_basin_x_bl_0_1","b_wq_basin_x_bl_1_2","b_wq_basin_x_bl_2_3",
+                "b_wq_subbasin_x_bl_0_1","b_wq_subbasin_x_bl_1_2","b_wq_subbasin_x_bl_2_3",
                 
+                "se_b_wq_basin_x_bl_0_1","se_b_wq_basin_x_bl_1_2","se_b_wq_basin_x_bl_2_3",
+                "se_b_wq_subbasin_x_bl_0_1","se_b_wq_subbasin_x_bl_1_2","se_b_wq_subbasin_x_bl_2_3",
                 
+                "b_baseline", "se_b_baseline",
+                "b_cost_x_bl", "se_b_cost_x_bl",
+                "b_wq_basin_x_bl", "se_b_wq_basin_x_bl",
+                "b_wq_sub_x_bl", "se_b_wq_sub_x_bl"
                 
   ),
-  Mean = c(NA,NA, NA,NA, NA,NA),
-  Standard_Deviation = c(NA,NA,NA,NA, NA,NA)
+  Mean = c(NA,NA, NA,NA, NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA),
+  Standard_Deviation = c(NA,NA, NA,NA, NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA)
 )
 
 
@@ -969,10 +1010,12 @@ estimates_df <- read.csv("output/Model 8_estimates.csv")%>%
 
 df3 <- estimates_df %>%
   filter(str_detect(Parameter, 
-                    "^b_cost|^b_asc_version2|^b_asc_version3|^b_asc_version4|^b_wq_x_version2|^b_wq_x_version3|^b_wq_x_version4"))%>%
+                    "^b_cost|^b_asc_baseline_wq_0_1|^b_asc_baseline_wq_1_2|^b_asc_baseline_wq_2_3|^b_cost_baseline_0_1|^b_cost_baseline_1_2|^b_cost_baseline_2_3|^b_wq_basin_x_bl_0_1|^b_wq_basin_x_bl_1_2|^b_wq_basin_x_bl_2_3|^b_wq_subbasin_x_bl_0_1|^b_wq_subbasin_x_bl_1_2|^b_wq_subbasin_x_bl_2_3"
+                      ))%>%
   mutate(SE=round(SE, digits = 4))%>%
   rename(Mean = Estimate_with_Stars) %>%
   mutate(SE = paste("(", SE, ")", sep = ""))
+
 
 df3_mean <- df3%>%
   select(Parameter,Mean)
@@ -1031,15 +1074,15 @@ df_model8 <- df1%>%
   left_join(df2)
 
 new_row <- data.frame(
-  Parameter = c("b_asc_baseline_wq_0_1","se_b_asc_baseline_wq_0_1",
-                "b_asc_baseline_wq_1_2", "se_b_asc_baseline_wq_1_2",
-                "b_asc_baseline_wq_2_3", "se_b_asc_baseline_wq_2_3"
-                
-                
+  Parameter = c(
+    "b_baseline", "se_b_baseline",
+    "b_cost_x_bl", "se_b_cost_x_bl",
+    "b_wq_basin_x_bl", "se_b_wq_basin_x_bl",
+    "b_wq_sub_x_bl", "se_b_wq_sub_x_bl"
                 
   ),
-  Mean = c(NA,NA, NA,NA, NA,NA),
-  Standard_Deviation = c(NA,NA,NA,NA, NA,NA)
+  Mean = c(NA,NA, NA,NA, NA,NA, NA,NA),
+  Standard_Deviation = c(NA,NA,NA,NA, NA,NA, NA,NA)
 )
 
 
@@ -1070,10 +1113,12 @@ estimates_df <- read.csv("output/Model 9_estimates.csv")%>%
 
 df3 <- estimates_df %>%
   filter(str_detect(Parameter, 
-                    "^b_cost|^b_asc_version2|^b_asc_version3|^b_asc_version4|^b_wq_x_version2|^b_wq_x_version3|^b_wq_x_version4"))%>%
+                    "^b_cost|^b_baseline|^b_cost_x_bl|^b_wq_basin_x_bl|^b_wq_sub_x_bl"))%>%
   mutate(SE=round(SE, digits = 4))%>%
   rename(Mean = Estimate_with_Stars) %>%
   mutate(SE = paste("(", SE, ")", sep = ""))
+
+
 
 df3_mean <- df3%>%
   select(Parameter,Mean)
@@ -1133,15 +1178,25 @@ df_model9 <- df1%>%
 
 
 new_row <- data.frame(
-  Parameter = c("b_asc_baseline_wq_0_1","se_b_asc_baseline_wq_0_1",
+  Parameter = c("b_asc_baseline_wq_0_1", "se_b_asc_baseline_wq_0_1",
                 "b_asc_baseline_wq_1_2", "se_b_asc_baseline_wq_1_2",
-                "b_asc_baseline_wq_2_3", "se_b_asc_baseline_wq_2_3"
+                "b_asc_baseline_wq_2_3", "se_b_asc_baseline_wq_2_3",
                 
+                "b_cost_baseline_0_1", "se_b_cost_baseline_0_1",
+                "b_cost_baseline_1_2", "se_b_cost_baseline_1_2",
+                "b_cost_baseline_2_3", "se_b_cost_baseline_2_3",
+
+                "b_wq_basin_x_bl_0_1", "se_b_wq_basin_x_bl_0_1",
+                "b_wq_basin_x_bl_1_2", "se_b_wq_basin_x_bl_1_2",
+                "b_wq_basin_x_bl_2_3", "se_b_wq_basin_x_bl_2_3",
                 
-                
+                "b_wq_subbasin_x_bl_0_1", "se_b_wq_subbasin_x_bl_0_1",
+                "b_wq_subbasin_x_bl_1_2", "se_b_wq_subbasin_x_bl_1_2",
+                "b_wq_subbasin_x_bl_2_3", "se_b_wq_subbasin_x_bl_2_3"
+
   ),
-  Mean = c(NA,NA, NA,NA, NA,NA),
-  Standard_Deviation = c(NA,NA,NA,NA, NA,NA)
+  Mean = c(NA,NA, NA,NA, NA,NA,NA,NA, NA,NA, NA,NA,NA,NA, NA,NA, NA,NA,NA,NA, NA,NA, NA,NA),
+  Standard_Deviation = c(NA,NA,NA,NA, NA,NA,NA,NA, NA,NA, NA,NA,NA,NA, NA,NA, NA,NA,NA,NA, NA,NA, NA,NA)
 )
 
 
@@ -1155,20 +1210,45 @@ df_model9 <- df_model9%>%
 desired_order <- c("b_asc","se_b_asc",
                    "b_wq","se_b_wq",
                    "b_cost","se_b_cost",
-                   "b_asc_baseline_wq_0_1","se_b_asc_baseline_wq_0_1",
-                   "b_asc_baseline_wq_1_2", "se_b_asc_baseline_wq_1_2",
-                   "b_asc_baseline_wq_2_3","se_b_asc_baseline_wq_2_3",
+                   
                    "b_wq_local_basin","se_b_wq_local_basin",
                    "b_wq_nonlocal_basin","se_b_wq_nonlocal_basin",
                    "b_wq_local_sub_basin", "se_b_wq_local_sub_basin",
-                   "b_wq_nonlocal_sub_basin", "se_b_wq_nonlocal_sub_basin"
+                   "b_wq_nonlocal_sub_basin", "se_b_wq_nonlocal_sub_basin",
+                   
+                   "b_asc_baseline_wq_0_1","se_b_asc_baseline_wq_0_1",
+                   "b_asc_baseline_wq_1_2","se_b_asc_baseline_wq_1_2",
+                   "b_asc_baseline_wq_2_3","se_b_asc_baseline_wq_2_3",
+                   
+                   "b_cost_baseline_0_1","se_b_cost_baseline_0_1",
+                   "b_cost_baseline_1_2","se_b_cost_baseline_1_2",
+                   "b_cost_baseline_2_3","se_b_cost_baseline_2_3",
+                   
+                   "b_wq_basin_x_bl_0_1", "se_b_wq_basin_x_bl_0_1",
+                   "b_wq_basin_x_bl_1_2", "se_b_wq_basin_x_bl_1_2",
+                   "b_wq_basin_x_bl_2_3", "se_b_wq_basin_x_bl_2_3",
+                   
+                   "b_wq_subbasin_x_bl_0_1", "se_b_wq_subbasin_x_bl_0_1",
+                   "b_wq_subbasin_x_bl_1_2", "se_b_wq_subbasin_x_bl_1_2",
+                   "b_wq_subbasin_x_bl_2_3", "se_b_wq_subbasin_x_bl_2_3",
+                   
+                   "b_baseline", "se_b_baseline",
+                   "b_cost_x_bl", "se_b_cost_x_bl",
+                   "b_wq_basin_x_bl", "se_b_wq_basin_x_bl",
+                   "b_wq_sub_x_bl", "se_b_wq_sub_x_bl"
+                   
+                   
+                   
+                   
+                   
+                   
 )
 
 
 
 
 df_model_table4 <- df_model6%>%
-  left_join(df_model7)%>%
+  #left_join(df_model7)%>%
   left_join(df_model8)%>%
   left_join(df_model9)%>%
   mutate(Flow = factor(Parameter, levels = desired_order))%>%
@@ -1178,16 +1258,38 @@ df_model_table4 <- df_model6%>%
     Parameter == "b_asc" ~ "ASC",
     Parameter == "b_wq" ~ "Water Quality",
     Parameter == "b_cost" ~ "Cost",
-    Parameter == "b_asc_baseline_wq_0_1" ~ "Baseline WQ: One unit up",
-    Parameter == "b_asc_baseline_wq_1_2" ~ "Baseline WQ: Two unit up",
-    Parameter == "b_asc_baseline_wq_2_3" ~ "Baseline WQ: Three unit up",
+
     Parameter == "b_wq_local_basin" ~ "Local Basin",
     Parameter == "b_wq_nonlocal_basin" ~ "Non-local Basin",
     Parameter == "b_wq_local_sub_basin" ~ "Local Sub Basin",
     Parameter == "b_wq_nonlocal_sub_basin" ~ "Non-local Sub Basin",
+    
+    Parameter == "b_asc_baseline_wq_0_1" ~ "Baseline WQ: One unit lower",
+    Parameter == "b_asc_baseline_wq_1_2" ~ "Baseline WQ: Two unit lower",
+    Parameter == "b_asc_baseline_wq_2_3" ~ "Baseline WQ: Three unit lower",
+    
+    Parameter == "b_cost_baseline_0_1" ~ "Baseline WQ: One unit lower X Cost",
+    Parameter == "b_cost_baseline_1_2" ~ "Baseline WQ: Two unit lower X Cost",
+    Parameter == "b_cost_baseline_2_3" ~ "Baseline WQ: Three unit lower X Cost",
+    
+    Parameter == "b_wq_basin_x_bl_0_1" ~ "Baseline WQ: One unit lower X Basin WQ Policy",
+    Parameter == "b_wq_basin_x_bl_1_2" ~ "Baseline WQ: Two unit lower X Basin WQ Policy",
+    Parameter == "b_wq_basin_x_bl_2_3" ~ "Baseline WQ: Three unit lower X Basin WQ Policy",
+    
+    Parameter == "b_wq_subbasin_x_bl_0_1" ~ "Baseline WQ: One unit lower X Sub Basin WQ Policy",
+    Parameter == "b_wq_subbasin_x_bl_1_2" ~ "Baseline WQ: Two unit lower X Sub Basin WQ Policy",
+    Parameter == "b_wq_subbasin_x_bl_2_3" ~ "Baseline WQ: Three unit lower X Sub Basin WQ Policy",
+    
+    Parameter == "b_baseline" ~ "Baseline WQ",
+    Parameter == "b_cost_x_bl" ~ "Baseline WQ X Cost",
+    Parameter == "b_wq_basin_x_bl" ~ "Baseline WQ X Basin WQ Policy",
+    Parameter == "b_wq_sub_x_bl" ~ "Baseline WQ X Sub Basin WQ Policy",
+    
     TRUE ~ Parameter  # keep all other values as-is
   ))%>%
-  mutate(Parameter = ifelse(grepl("^se_", Parameter), "", Parameter))
+  mutate(Parameter = ifelse(grepl("^se_", Parameter), "", Parameter))%>%
+  filter(!if_all(c(Mean_M6, SE_M6,Mean_M8, SE_M8,Mean_M9, SE_M9), is.na)) 
+
 
 
 

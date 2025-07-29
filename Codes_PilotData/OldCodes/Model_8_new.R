@@ -28,7 +28,8 @@ apollo_control = list(
 #### LOAD DATA                                                   ####
 # ################################################################# #
 
-database <- read_csv("./Deriveddata/processed_finaldata_batch_1_Apollo.csv")
+database <- read_csv("./Deriveddata/processed_finaldata_batch_1_Apollo.csv")%>%
+  filter(BASELINE_WQ_0_1UNIT ==1)
 
 # Arrange data by RespondentID
 database <- database %>%
@@ -64,23 +65,8 @@ apollo_beta = c(
   mu_b_wq_local_sub_basin = 0,
   sigma_b_wq_local_sub_basin = 0.1,
   mu_b_wq_nonlocal_sub_basin = 0,
-  sigma_b_wq_nonlocal_sub_basin = 0.1,
+  sigma_b_wq_nonlocal_sub_basin = 0.1
   
-  b_asc_baseline_wq_0_1 = 0,
-  b_asc_baseline_wq_1_2 =0,
-  b_asc_baseline_wq_2_3 =0,
-  
-  #b_cost_baseline_0_1 = 0,
-  #b_cost_baseline_1_2 = 0,
-  #b_cost_baseline_2_3 = 0,
-  
-  b_wq_basin_x_bl_0_1 = 0,
-  b_wq_basin_x_bl_1_2 = 0,
-  b_wq_basin_x_bl_2_3 = 0,
-  
-  b_wq_subbasin_x_bl_0_1 = 0,
-  b_wq_subbasin_x_bl_1_2 = 0,
-  b_wq_subbasin_x_bl_2_3 = 0
   
 )
 
@@ -139,40 +125,19 @@ apollo_probabilities = function(apollo_beta, apollo_inputs, functionality = "est
   
   # Define utilities
   V = list()
-  V[["policy"]] = b_asc + 
-    b_cost * COST + 
-    
-    # Proposed WQ improvements (policy attributes)
-    b_wq_local_basin * WQ_BASIN_LOCAL_POLICY +
-    b_wq_nonlocal_basin * WQ_BASIN_NL_POLICY +
-    b_wq_local_sub_basin * WQ_SUBBASIN_LOCAL_POLICY_SUBONLY +
-    b_wq_nonlocal_sub_basin * WQ_SUBBASIN_NL_POLICY_SUBONLY +
-    
-    # Baseline WQ direct effects
-    b_asc_baseline_wq_0_1 * BASELINE_WQ_0_1UNIT +
-    b_asc_baseline_wq_1_2 * BASELINE_WQ_1_2UNIT +
-    b_asc_baseline_wq_2_3 * BASELINE_WQ_2_3UNIT +
-    
-    # Cost × Baseline interactions (existing)
-    #b_cost_baseline_0_1 * COST * BASELINE_WQ_0_1UNIT +
-    #b_cost_baseline_1_2 * COST * BASELINE_WQ_1_2UNIT +
-    #b_cost_baseline_2_3 * COST * BASELINE_WQ_2_3UNIT +
-    
-    # NEW: Interactions between WQ improvements and baseline WQ
-    b_wq_basin_x_bl_0_1 * WQ_POLICY_BASIN * BASELINE_WQ_0_1UNIT *(CHOICE_AREA == "BASIN") +
-    b_wq_basin_x_bl_1_2 * WQ_POLICY_BASIN * BASELINE_WQ_1_2UNIT *(CHOICE_AREA == "BASIN") +
-    b_wq_basin_x_bl_2_3 * WQ_POLICY_BASIN * BASELINE_WQ_2_3UNIT *(CHOICE_AREA == "BASIN") +
-    
-    b_wq_subbasin_x_bl_0_1 * WQ_POLICT_SUBBASIN * BASELINE_WQ_0_1UNIT *(CHOICE_AREA == "SUBBASIN") +  
-    b_wq_subbasin_x_bl_1_2 * WQ_POLICT_SUBBASIN * BASELINE_WQ_1_2UNIT *(CHOICE_AREA == "SUBBASIN") +
-    b_wq_subbasin_x_bl_2_3 * WQ_POLICT_SUBBASIN * BASELINE_WQ_2_3UNIT *(CHOICE_AREA == "SUBBASIN")
-    
-
+  V[["policy"]]  = b_asc + b_cost *COST + 
+    b_wq_local_basin*WQ_BASIN_LOCAL_POLICY +
+    b_wq_nonlocal_basin*WQ_BASIN_NL_POLICY +
+    b_wq_local_sub_basin*WQ_SUBBASIN_LOCAL_POLICY_SUBONLY +
+    b_wq_nonlocal_sub_basin*WQ_SUBBASIN_NL_POLICY_SUBONLY
+  
+  
   V[["opt_out"]] = 
-    b_wq_local_basin * WQ_BASIN_LOCAL_CURRENT +
-    b_wq_nonlocal_basin * WQ_BASIN_NL_CURRENT +
-    b_wq_local_sub_basin * WQ_SUBBASIN_LOCAL_CURRENT_SUBONLY +
-    b_wq_nonlocal_sub_basin * WQ_SUBBASIN_NL_CURRENT_SUBONLY
+    b_wq_local_basin*WQ_BASIN_LOCAL_CURRENT +
+    b_wq_nonlocal_basin*WQ_BASIN_NL_CURRENT +
+    b_wq_local_sub_basin*WQ_SUBBASIN_LOCAL_CURRENT_SUBONLY+
+    b_wq_nonlocal_sub_basin*WQ_SUBBASIN_NL_CURRENT_SUBONLY
+  
   
   # Define MNL settings
   mnl_settings = list(
@@ -210,3 +175,71 @@ apollo_modelOutput(model)
 # Save model outputs
 apollo_saveOutput(model)
 
+################################################################################
+# WTP # WTP # WTP # WTP # WTP # WTP # WTP # WTP # WTP # WTP # WTP # WTP # WTP 
+
+
+# Extract coefficients and covariance matrix
+coef_values <- model$estimate
+vcov_matrix <- model$robvarcov
+
+
+# WTP for one unit improvement of WQ at Local Basin
+
+df1 <- deltaMethod(
+  object = coef_values, 
+  vcov. = vcov_matrix, 
+  g = "(mu_b_wq_local_basin/b_cost)"
+)%>% 
+  {`rownames<-`(., NULL)}%>%
+  mutate(`WQ change scenario` = "Local Basin")%>%
+  relocate(`WQ change scenario`, .before = 1)%>%
+  mutate(across(where(is.numeric), ~ round(.x, 0)))
+
+
+# WTP for one unit improvement of WQ at Non-Local Basin
+
+df2 <- deltaMethod(
+  object = coef_values, 
+  vcov. = vcov_matrix, 
+  g = "(mu_b_wq_nonlocal_basin/b_cost)"
+)%>% 
+  {`rownames<-`(., NULL)}%>%
+  mutate(`WQ change scenario` = "Non-Local Basin")%>%
+  relocate(`WQ change scenario`, .before = 1)%>%
+  mutate(across(where(is.numeric), ~ round(.x, 0)))
+
+
+
+# WTP for one unit improvement of WQ at Local subbasin
+
+df3 <- deltaMethod(
+  object = coef_values, 
+  vcov. = vcov_matrix, 
+  g = "(mu_b_wq_local_sub_basin/b_cost)"
+)%>% 
+  {`rownames<-`(., NULL)}%>%
+  mutate(`WQ change scenario` = "Local Sub Basin")%>%
+  relocate(`WQ change scenario`, .before = 1)%>%
+  mutate(across(where(is.numeric), ~ round(.x, 0)))
+
+
+
+# WTP for one unit improvement of WQ at non-local subbasin
+
+df4 <- deltaMethod(
+  object = coef_values, 
+  vcov. = vcov_matrix, 
+  g = "(mu_b_wq_nonlocal_sub_basin/b_cost)"
+)%>% 
+  {`rownames<-`(., NULL)}%>%
+  mutate(`WQ change scenario` = "Non-Local  Sub Basin")%>%
+  relocate(`WQ change scenario`, .before = 1)%>%
+  mutate(across(where(is.numeric), ~ round(.x, 0)))
+
+
+df_all <- rbind(df1,df2,df3,df4)%>%
+  mutate(version = "v2")
+
+
+write.csv(df_all, "Tables/WTP_oneUnit_version2.csv")

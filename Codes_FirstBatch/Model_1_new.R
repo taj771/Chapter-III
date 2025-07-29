@@ -21,14 +21,16 @@ apollo_control = list(
   modelDescr      = "Mixed-MNL",
   indivID         = "CaseId",  
   nCores          = 8,
-  outputDirectory = "output"
+  outputDirectory = "output",
+  weights = "WEIGHT"
 )
 
 # ################################################################# #
 #### LOAD DATA                                                   ####
 # ################################################################# #
 
-database <- read_csv("./Deriveddata/processed_finaldata_batch_1_Apollo.csv")
+database <- read_csv("./Deriveddata/processed_finaldata_batch_1_Apollo.csv")%>%
+  filter(!is.na(WEIGHT))
 
 # Arrange data by RespondentID
 database <- database %>%
@@ -79,13 +81,13 @@ apollo_fixed = c()
 
 ### Set parameters for generating draws
 apollo_draws = list(
-  interDrawsType = "halton",
+  interDrawsType = "sobol",
   interNDraws    = 1000,
   interUnifDraws = c(),
   interNormDraws = c("draws_asc",
                      "draws_wq_local_basin","draws_wq_nonlocal_basin",
                      "draws_wq_local_sub_basin","draws_wq_nonlocal_sub_basin"),
-  intraDrawsType = "halton",
+  intraDrawsType = "sobol",
   intraNDraws    = 0,
   intraUnifDraws = c(),
   intraNormDraws = c()
@@ -154,6 +156,9 @@ apollo_probabilities = function(apollo_beta, apollo_inputs, functionality = "est
   
   ### Average across inter-individual draws
   P = apollo_avgInterDraws(P, apollo_inputs, functionality)
+  
+  ### Apply weights here (note the functionality argument)
+  P = apollo_weighting(P, apollo_inputs, functionality)
   
   ### Prepare and return outputs of function
   P = apollo_prepareProb(P, apollo_inputs, functionality)

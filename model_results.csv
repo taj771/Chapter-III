@@ -1,0 +1,18 @@
+"Parameter","Estimate","Std. Error","t-ratio","p-value"
+"ASC (mean)",2.616,0.23,11.377,0
+"ASC (SD)",3.249,0.148,22.022,0
+"Cost",-0.007,0,-16.605,0
+"WQ Local Basin (mean)",-1.328,0.164,-8.106,0
+"WQ Local Basin (SD)",0.814,0.202,4.036,0
+"WQ Non-local Basin (mean)",-0.944,0.108,-8.773,0
+"WQ Non-local Basin (SD)",-0.017,0.032,-0.516,0.606
+"WQ Local Sub-basin (mean)",-0.836,0.116,-7.213,0
+"WQ Local Sub-basin (SD)",-0.006,0.017,-0.344,0.731
+"WQ Non-local Sub-basin (mean)",-0.551,0.076,-7.277,0
+"WQ Non-local Sub-basin (SD)",-0.433,0.095,-4.547,0
+"Baseline WQ: One unit up",-0.301,0.199,-1.507,0.132
+"Baseline WQ: Two units up",-0.656,0.252,-2.602,0.009
+"Baseline WQ: Three units up",0.213,0.338,0.631,0.528
+"Cost × Baseline (One unit)",0.001,0.001,1.799,0.072
+"Cost × Baseline (Two units)",0.001,0.001,1.348,0.178
+"Cost × Baseline (Three units)",-0.002,0.001,-1.572,0.116
