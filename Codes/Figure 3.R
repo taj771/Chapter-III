@@ -1,12 +1,16 @@
+###########################################################################################################
+# Figure 3: The average baseline Health Score for 18 sub-basins under four baseline
+# conditions across survey versions.
+###########################################################################################################
+
 ### Clear memory
 rm(list = ls())
 
-library(sf)
-library(tmap)
-library(tidyverse)
-library(tidygeocoder)
-
 df_map <- st_read("/Users/tharakajayalath/Library/CloudStorage/OneDrive-UniversityofSaskatchewan/Chapter III-UseNonUseValue/Survey/Shapefile/study_area_map_with_WQ.shp")
+
+
+df_map<- df_map%>%
+  mutate(HEALTH_SCORE = as.numeric(str_remove(WQ_FINAL, "Level")))
 
 
 ab <- st_read("/Users/tharakajayalath/Library/CloudStorage/OneDrive-UniversityofSaskatchewan/Chapter III-UseNonUseValue/Survey/Shapefile/AB.shp")
@@ -15,7 +19,9 @@ sk <- st_read("/Users/tharakajayalath/Library/CloudStorage/OneDrive-Universityof
 
 
 # Example data frame with city names
-cities <- data.frame(city = c("Calgary","Edmonton", "Regina", "Saskatoon", "Winnipeg"))
+cities <- data.frame(city = c("Grand Prairie","Slave Lake","Fort McMurray","Edson","Edmonton","Red Deer","Banf","Calgary","Brooks","Drumheller","Brooks",
+                              "Cold lake","North Battleford", "Medicine Hat", "Moose Jaw","Saskatoon","Regina","Prince Albert", "Fort Qu'Apelle",
+                              "Swan River", "The pas", "Split Lake", "Cross Lake", "Oxford House", "Altona", "Stonewall", "Minnedosa"))
 
 # Geocode using OSM (default)
 geocoded_cities <- cities %>%
@@ -26,54 +32,30 @@ cities <- st_as_sf(geocoded_cities, coords = c("longitude", "latitude"), crs = 4
 
 
 # Get the number of unique values in WTP_2
-n_colors <- length(unique(df_map$basin))
+n_colors <- length(unique(df_map$HEALTH_SCORE))
 
 # Generate a vector of n unique colors
 library(viridis)
 library(tmap)
-my_colors <- colorRampPalette(c("seagreen3", "aquamarine4", "chartreuse4", "darkolivegreen3"))
-
+my_colors <- colorRampPalette(c("lightblue", "darkgreen", "yellow", "orange", "red"))
 custom_palette <- my_colors(n_colors)
 
 
-# Create palette function with transparency
-my_colors <- function(n) {
-  adjustcolor(colorRampPalette(c("cadetblue", "dodgerblue3", "royalblue4", "deepskyblue3"))(n),
-              alpha.f = 0.4)  # opacity set to 60%
-}
-
-# Generate exactly 4 colors
-custom_palette <- my_colors(4)
-
-# Check the colors
-custom_palette
-
-df_map$basin <- factor(df_map$basin, levels = c("SS", "NS", "LSN","AR"), 
-                       labels = c("South Saskatchewan", "North Saskatchewan", "Lower Saskatchewan - Nelson", "Assiniboine Red"))
-
-
-
 value_map <- tm_shape(df_map, crs = 3347)+
-  tm_fill(    col = "basin",
+  tm_fill(    col = "HEALTH_SCORE",
               palette = custom_palette,
-              style = "cat",
-              title = "River Basin",
-              labels = levels(as.factor(df_map$basin))
+              style = "cont",
+              title = "Health Score",
+              labels = c("Very good", "Good", "Fair", "Poor", "Very poor")
   ) +
-  tm_borders(col = "gray46", lwd = 0.1) +
+  tm_borders() +
   #tm_text("name_code", size = 0.8, col = "black", remove.overlap = TRUE)+  # Adjust size,
   tm_shape(ab, crs = 3347) +
   tm_borders(col = "black", lwd = 2)+
-  tm_text("PRNAME", size = 0.9, col = "black",ymod = 2.5, fontface = "bold")+
-  
   tm_shape(mb, crs = 3347) +
   tm_borders(col = "black", lwd = 2)+
-  tm_text("PRNAME", size = 0.9, col = "black",ymod = 6.5, fontface = "bold")+
-  
   tm_shape(sk, crs = 3347) +
   tm_borders(col = "black", lwd = 2)+ 
-  tm_text("PRNAME", size = 0.9, col = "black",ymod = 4.5, fontface = "bold")+
-  
   #tm_shape(ab_cities) +
   #tm_borders(col = "black", lwd = 2)+
   #tm_text("name", size = 0.6, col = "black", remove.overlap = TRUE)+  # Adjust size,
@@ -98,20 +80,13 @@ value_map <- tm_shape(df_map, crs = 3347)+
   )+
   
   tm_shape(cities) +
-  tm_symbols(col = "black", size = 0.2) +
-  tm_text("city", size = 0.9, col = "black",ymod = -0.5)+
+  tm_symbols(col = "blue", size = 0.1) +
+  tm_text("city", size = 0.7, col = "black",ymod = -0.5)+
   
   tm_legend(frame = F)
 
-
 # Save to PNG
-tmap_save(value_map, "Figures/study_area.png", width = 10, height = 8, units = "in", dpi = 300)
-
-
-
-
-
-
+tmap_save(value_map, "Figures/current_wq_level.png", width = 10, height = 8, units = "in", dpi = 300)
 
 
 

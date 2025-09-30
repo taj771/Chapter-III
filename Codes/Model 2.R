@@ -1,6 +1,7 @@
 ########################################################################################
-# Description: RPM Model 2
+# Description: Model 2 (RPM)
 #######################################################################################
+
 
 ### Clear memory
 rm(list = ls())
@@ -16,11 +17,12 @@ apollo_initialise()
 
 ### Set core controls
 apollo_control = list(
-  modelName       = "Model 6",
+  modelName       = "Model 2",
   modelDescr      = "Mixed-MNL",
   indivID         = "CaseId",  
-  nCores          = 4,
-  outputDirectory = "output"
+  nCores          = 8,
+  outputDirectory = "output",
+  weights = "WEIGHT"
 )
 
 # ################################################################# #
@@ -36,9 +38,6 @@ database <- database %>%
 database <- database %>%
   filter(!is.na(VOTE))%>%
   
-  filter(!is.na(BASELINE_X_WQCHANGE))%>%
-  
-  
   filter(!is.na(WQ_SUBBASIN_LOCAL_CURRENT_SUBONLY))%>%
   filter(!is.na(WQ_SUBBASIN_NL_CURRENT_SUBONLY))%>%
   
@@ -51,7 +50,6 @@ database <- database %>%
   filter(!is.na(WQ_BASIN_LOCAL_POLICY))%>%
   filter(!is.na(WQ_BASIN_NL_POLICY))
 
-
 # ################################################################# #
 #### DEFINE MODEL PARAMETERS                                     ####
 # ################################################################# #
@@ -59,9 +57,7 @@ database <- database %>%
 apollo_beta = c(
   mu_b_asc     = 0,  
   sigma_b_asc = 0.01,
-  
   b_cost  = 0,   
-  
   mu_b_wq_local_basin = 0,
   sigma_b_wq_local_basin = 0.1,
   mu_b_wq_nonlocal_basin = 0,
@@ -69,22 +65,7 @@ apollo_beta = c(
   mu_b_wq_local_sub_basin = 0,
   sigma_b_wq_local_sub_basin = 0.1,
   mu_b_wq_nonlocal_sub_basin = 0,
-  sigma_b_wq_nonlocal_sub_basin = 0.1,
-  
-  b_basewq = 0.01,
-  
-  b_version1 = 0,
-  b_version2 = 0, 
-  b_version3 = 0 
-
-  #mu_b_basewqxwqincrease_local_basin = 0,
-  #sigma_b_basewqxwqincrease_local_basin = 0.1,
-  #mu_b_basewqxwqincrease_nonlocal_basin = 0,
-  #sigma_b_basewqxwqincrease_nonlocal_basin = 0.1,
-  #mu_b_basewqxwqincrease_local_sub_basin = 0,
-  #sigma_b_basewqxwqincrease_local_sub_basin = 0.1
-  #mu_b_basewqxwqincrease_nonlocal_sub_basin = 0,
-  #sigma_b_basewqxwqincrease_nonlocal_sub_basin = 0.1
+  sigma_b_wq_nonlocal_sub_basin = 0.1
   
   
 )
@@ -102,15 +83,9 @@ apollo_draws = list(
   interDrawsType = "sobol",
   interNDraws    = 1000,
   interUnifDraws = c(),
-  interNormDraws = c( "draws_asc",
-                      "draws_wq_local_basin","draws_wq_nonlocal_basin",
-                      "draws_wq_local_sub_basin","draws_wq_nonlocal_sub_basin",
-                      
-                      "draws_basewqxwqincrease",
-                      
-                      "draws_basewqxwqincrease_local_basin","draws_basewqxwqincrease_nonlocal_basin"
-
-  ),
+  interNormDraws = c("draws_asc",
+                     "draws_wq_local_basin","draws_wq_nonlocal_basin",
+                     "draws_wq_local_sub_basin","draws_wq_nonlocal_sub_basin"),
   intraDrawsType = "sobol",
   intraNDraws    = 0,
   intraUnifDraws = c(),
@@ -121,7 +96,6 @@ apollo_draws = list(
 ### Create random parameters
 apollo_randCoeff = function(apollo_beta, apollo_inputs){
   randcoeff = list()
-  
   randcoeff[["b_asc"]] = mu_b_asc + sigma_b_asc*draws_asc 
   
   randcoeff[["b_wq_local_basin"]] =  mu_b_wq_local_basin + sigma_b_wq_local_basin*draws_wq_local_basin
@@ -130,17 +104,8 @@ apollo_randCoeff = function(apollo_beta, apollo_inputs){
   randcoeff[["b_wq_local_sub_basin"]] =  mu_b_wq_local_sub_basin + sigma_b_wq_local_sub_basin*draws_wq_local_sub_basin
   randcoeff[["b_wq_nonlocal_sub_basin"]] =  mu_b_wq_nonlocal_sub_basin + sigma_b_wq_nonlocal_sub_basin*draws_wq_nonlocal_sub_basin
   
-  #randcoeff[["b_basewq_x_wqincrease_local_basin"]] =  mu_b_basewqxwqincrease_local_basin + sigma_b_basewqxwqincrease_local_basin*draws_basewqxwqincrease_local_basin
-  #randcoeff[["b_basewq_x_wqincrease_nonlocal_basin"]] =  mu_b_basewqxwqincrease_nonlocal_basin + sigma_b_basewqxwqincrease_nonlocal_basin*draws_basewqxwqincrease_nonlocal_basin
-  
-  #randcoeff[["b_basewq_x_wqincrease_local_sub_basin"]] =  mu_b_basewqxwqincrease_local_sub_basin + sigma_b_basewqxwqincrease_local_sub_basin*draws_basewqxwqincrease_local_sub_basin
-  #randcoeff[["b_basewq_x_wqincrease_nonlocal_sub_basin"]] =  mu_b_basewqxwqincrease_nonlocal_sub_basin + sigma_b_basewqxwqincrease_nonlocal_sub_basin*draws_basewqxwqincrease_nonlocal_sub_basin
-  
-  
-  
   return(randcoeff)
 }
-
 
 # ################################################################# #
 #### GROUP AND VALIDATE INPUTS                                   ####
@@ -160,32 +125,18 @@ apollo_probabilities = function(apollo_beta, apollo_inputs, functionality = "est
   
   # Define utilities
   V = list()
-  V[["policy"]]  = b_asc + b_cost *COST  +  
+  V[["policy"]]  = b_asc + b_cost *COST + 
     b_wq_local_basin*WQ_BASIN_LOCAL_POLICY +
     b_wq_nonlocal_basin*WQ_BASIN_NL_POLICY +
     b_wq_local_sub_basin*WQ_SUBBASIN_LOCAL_POLICY_SUBONLY +
-    b_wq_nonlocal_sub_basin*WQ_SUBBASIN_NL_POLICY_SUBONLY +
-    b_basewq*WQ_CURRENT_CHOICE*(WQ_CURRENT_CHOICE-WQ_POLICY_CHOICE) +
-    
-    b_version1 * VERSION_1 + 
-    b_version2 * VERSION_2 + 
-    b_version3 * VERSION_3   
-  
-  #b_basewq_x_wqincrease_local_basin*BASELINE_X_WQCHANGE_LOCAL_BASIN +
-  #b_basewq_x_wqincrease_nonlocal_basin*BASELINE_X_WQCHANGE_NL_BASIN +
-  
-  #b_basewq_x_wqincrease_local_sub_basin*BASELINE_X_WQCHANGE_LOCAL_SUBBASIN 
-  #b_basewq_x_wqincrease_nonlocal_sub_basin*BASELINE_X_WQCHANGE_NL_SUBBASIN 
+    b_wq_nonlocal_sub_basin*WQ_SUBBASIN_NL_POLICY_SUBONLY
   
   
-  
-  V[["opt_out"]] = b_wq_local_basin*WQ_BASIN_LOCAL_CURRENT +
+  V[["opt_out"]] = 
+    b_wq_local_basin*WQ_BASIN_LOCAL_CURRENT +
     b_wq_nonlocal_basin*WQ_BASIN_NL_CURRENT +
     b_wq_local_sub_basin*WQ_SUBBASIN_LOCAL_CURRENT_SUBONLY+
-    b_wq_nonlocal_sub_basin*WQ_SUBBASIN_NL_CURRENT_SUBONLY 
-    
-
- 
+    b_wq_nonlocal_sub_basin*WQ_SUBBASIN_NL_CURRENT_SUBONLY
   
   
   # Define MNL settings
@@ -205,6 +156,9 @@ apollo_probabilities = function(apollo_beta, apollo_inputs, functionality = "est
   ### Average across inter-individual draws
   P = apollo_avgInterDraws(P, apollo_inputs, functionality)
   
+  ### Apply weights here (note the functionality argument)
+  P = apollo_weighting(P, apollo_inputs, functionality)
+  
   ### Prepare and return outputs of function
   P = apollo_prepareProb(P, apollo_inputs, functionality)
   return(P)
@@ -216,8 +170,11 @@ apollo_probabilities = function(apollo_beta, apollo_inputs, functionality = "est
 
 model = apollo_estimate(apollo_beta, apollo_fixed,apollo_probabilities, apollo_inputs)
 
+
+
 # Display model outputs
 apollo_modelOutput(model)
 
 # Save model outputs
 apollo_saveOutput(model)
+

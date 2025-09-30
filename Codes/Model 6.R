@@ -1,5 +1,5 @@
 ########################################################################################
-# Description: RPM Model 3
+# Description: Model 6 (RPM)
 #######################################################################################
 
 
@@ -17,7 +17,7 @@ apollo_initialise()
 
 ### Set core controls
 apollo_control = list(
-  modelName       = "Model 3",
+  modelName       = "Model 4",
   modelDescr      = "Mixed-MNL",
   indivID         = "CaseId",  
   nCores          = 8,
@@ -55,25 +55,8 @@ database <- database %>%
   filter(!is.na(AREA_INSTATE_NL_BASIN))%>%
   
   filter(!is.na(AREA_INSTATE_LOCAL_SUBBASIN))%>%
-  filter(!is.na(AREA_INSTATE_NL_SUBBASIN))%>%
+  filter(!is.na(AREA_INSTATE_NL_SUBBASIN))
   
-  filter(!is.na(WQ_NON_LOCAL_ADJUCENT_LOCAL_BASIN_POLICY))%>%
-  filter(!is.na(WQ_NON_LOCAL_ADJUCENT_LOCAL_SUBBASIN_POLCIY))%>%
-  
-  filter(!is.na(WQ_NON_LOCAL_NOT_ADJUCENT_LOCAL_BASIN_POLICY))%>%
-  filter(!is.na(WQ_NON_LOCAL_NOT_ADJUCENT_LOCAL_SUBBASIN_POLCIY))%>%
-  
-  filter(!is.na(WQ_NON_LOCAL_ADJUCENT_LOCAL_BASIN_CURRENT))%>%
-  filter(!is.na(WQ_NON_LOCAL_ADJUCENT_LOCAL_SUBBASIN_CURRENT))%>%
-  
-  filter(!is.na(WQ_NON_LOCAL_NOT_ADJUCENT_LOCAL_BASIN_CURRENT))%>%
-  filter(!is.na(WQ_NON_LOCAL_NOT_ADJUCENT_LOCAL_SUBBASIN_CURRENT))
-  
-  
-  
-  
-  
-
 
 
 # ################################################################# #
@@ -89,21 +72,16 @@ apollo_beta = c(
   mu_b_wq_local_basin = 0,
   sigma_b_wq_local_basin = 0.01,
   
+  mu_b_wq_nonlocal_basin = 0,
+  sigma_b_wq_nonlocal_basin = 0.01,
+  
   mu_b_wq_local_sub_basin = 0,
   sigma_b_wq_local_sub_basin = 0.01,
   
-  mu_b_wq_nonlocal_adj_local_basin = 0,
-  sigma_b_wq_nonlocal_adj_local_basin = 0,
+  mu_b_wq_nonlocal_sub_basin = 0,
+  sigma_b_wq_nonlocal_sub_basin = 0.01,
   
-  mu_b_wq_nonlocal_adj_local_sub_basin = 0,
-  sigma_b_wq_nonlocal_adj_local_sub_basin = 0,
-  
-  mu_b_wq_nonlocal_not_adj_local_basin = 0,
-  sigma_b_wq_nonlocal_not_adj_local_basin = 0,
-  
-  mu_b_wq_nonlocal_not_adj_local_sub_basin = 0,
-  sigma_b_wq_nonlocal_not_adj_local_sub_basin = 0
-  
+  b_asc_home_prov_share = 0
 )
 
 
@@ -118,14 +96,12 @@ apollo_fixed = c()
 ### Set parameters for generating draws
 apollo_draws = list(
   interDrawsType = "sobol",
-  interNDraws    = 5000,
+  interNDraws    = 1000,
   interUnifDraws = c(),
   interNormDraws = c("draws_asc",
-                     "draws_wq_local_basin",
-                     "draws_wq_local_sub_basin",
-                     "draws_wq_nonlocal_adj_local_basin", "draws_wq_nonlocal_adj_local_sub_basin",  
-                     "draws_wq_nonlocal_not_adj_local_basin", "draws_wq_nonlocal_not_adj_local_sub_basin"
-  ),
+                     "draws_wq_local_basin","draws_wq_nonlocal_basin",
+                     "draws_wq_local_sub_basin","draws_wq_nonlocal_sub_basin"
+                     ),
   intraDrawsType = "sobol",
   intraNDraws    = 0,
   intraUnifDraws = c(),
@@ -140,17 +116,14 @@ apollo_randCoeff = function(apollo_beta, apollo_inputs){
   randcoeff[["b_asc"]] = mu_b_asc + sigma_b_asc*draws_asc 
   
   randcoeff[["b_wq_local_basin"]] =  mu_b_wq_local_basin + sigma_b_wq_local_basin*draws_wq_local_basin
+  randcoeff[["b_wq_nonlocal_basin"]] =  mu_b_wq_nonlocal_basin + sigma_b_wq_nonlocal_basin*draws_wq_nonlocal_basin
+  
   randcoeff[["b_wq_local_sub_basin"]] =  mu_b_wq_local_sub_basin + sigma_b_wq_local_sub_basin*draws_wq_local_sub_basin
-
-  randcoeff[["b_wq_nonlocal_adj_local_basin"]] =  mu_b_wq_nonlocal_adj_local_basin + sigma_b_wq_nonlocal_adj_local_basin*draws_wq_nonlocal_adj_local_basin
-  randcoeff[["b_wq_nonlocal_adj_local_sub_basin"]] =  mu_b_wq_nonlocal_adj_local_sub_basin + sigma_b_wq_nonlocal_adj_local_sub_basin*draws_wq_nonlocal_adj_local_sub_basin
+  randcoeff[["b_wq_nonlocal_sub_basin"]] =  mu_b_wq_nonlocal_sub_basin + sigma_b_wq_nonlocal_sub_basin*draws_wq_nonlocal_sub_basin
   
-  randcoeff[["b_wq_nonlocal_not_adj_local_basin"]] =  mu_b_wq_nonlocal_not_adj_local_basin + sigma_b_wq_nonlocal_not_adj_local_basin*draws_wq_nonlocal_not_adj_local_basin
-  randcoeff[["b_wq_nonlocal_not_adj_local_sub_basin"]] =  mu_b_wq_nonlocal_not_adj_local_sub_basin + sigma_b_wq_nonlocal_not_adj_local_sub_basin*draws_wq_nonlocal_not_adj_local_sub_basin
+  
   
 
-  
-  
   return(randcoeff)
 }
 
@@ -175,19 +148,17 @@ apollo_probabilities = function(apollo_beta, apollo_inputs, functionality = "est
   V[["policy"]]  = b_asc + 
     b_cost *COST + 
     b_wq_local_basin*WQ_BASIN_LOCAL_POLICY +
+    b_wq_nonlocal_basin*WQ_BASIN_NL_POLICY +
     b_wq_local_sub_basin*WQ_SUBBASIN_LOCAL_POLICY_SUBONLY +
-    b_wq_nonlocal_adj_local_basin*WQ_NON_LOCAL_ADJUCENT_LOCAL_BASIN_POLICY +
-    b_wq_nonlocal_adj_local_sub_basin*WQ_NON_LOCAL_ADJUCENT_LOCAL_SUBBASIN_POLCIY +
-    b_wq_nonlocal_not_adj_local_basin*WQ_NON_LOCAL_NOT_ADJUCENT_LOCAL_BASIN_POLICY +
-    b_wq_nonlocal_not_adj_local_sub_basin*WQ_NON_LOCAL_NOT_ADJUCENT_LOCAL_SUBBASIN_POLCIY
-  
+    b_wq_nonlocal_sub_basin*WQ_SUBBASIN_NL_POLICY_SUBONLY +
+    b_asc_home_prov_share*HOME_PROV_SHARE
+
+
   V[["opt_out"]] = 
     b_wq_local_basin*WQ_BASIN_LOCAL_CURRENT +
+    b_wq_nonlocal_basin*WQ_BASIN_NL_CURRENT +
     b_wq_local_sub_basin*WQ_SUBBASIN_LOCAL_CURRENT_SUBONLY+
-    b_wq_nonlocal_adj_local_basin*WQ_NON_LOCAL_ADJUCENT_LOCAL_BASIN_CURRENT +
-    b_wq_nonlocal_adj_local_sub_basin*WQ_NON_LOCAL_ADJUCENT_LOCAL_SUBBASIN_CURRENT +
-    b_wq_nonlocal_not_adj_local_basin*WQ_NON_LOCAL_NOT_ADJUCENT_LOCAL_BASIN_CURRENT +
-    b_wq_nonlocal_not_adj_local_sub_basin*WQ_NON_LOCAL_NOT_ADJUCENT_LOCAL_SUBBASIN_CURRENT
+    b_wq_nonlocal_sub_basin*WQ_SUBBASIN_NL_CURRENT_SUBONLY
   
   
   # Define MNL settings

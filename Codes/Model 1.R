@@ -1,7 +1,5 @@
 ########################################################################################
-# Description: MNL Model 1
-# WQ parameters further seperate into local basin changes, local sub basin changes, 
-# non-local basin changes and non-local sub basin chnages
+# Description: Model 1 (MNL)
 #######################################################################################
 
 # Clean the memory
