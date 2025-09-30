@@ -10,7 +10,7 @@ rm(list = ls())  # Removes all objects in the environment
 
 
 # Read raw data file from CHAISR
-df <- read_sav("./Rawdata/Water_Quality.sav 2")
+df <- read_sav("./Rawdata/Water_Quality_batch2.sav")
 
 # In original file it has create a column for each data point recorded. For example, it create separate colom for 118 block desperately 
 # along with all other relevant parameters for each block (i.e. Policy area, baseline WQ, improved WQ). SO in this portion of the code we 
@@ -964,7 +964,13 @@ df_final <- df_final%>%
   mutate(NON_LOCAL_ADJUCENT_LOCAL_BASIN = ifelse(CHOICE_AREA == "BASIN" & CHOICE_LOCALITY_BASIN == "NONLOCAL" & 
                                                    LOCAL_ADJUCENT == 1, 1,0 ))%>%
   mutate(NON_LOCAL_ADJUCENT_LOCAL_SUBBASIN = ifelse(CHOICE_AREA == "SUBBASIN" & CHOICE_LOCALITY_SUBBASIN == "NONLOCAL" & 
-                                                   LOCAL_ADJUCENT == 1, 1,0 ))
+                                                   LOCAL_ADJUCENT == 1, 1,0 ))%>%
+  mutate(NON_LOCAL_NOT_ADJUCENT_LOCAL_BASIN = ifelse(CHOICE_AREA == "BASIN" & CHOICE_LOCALITY_BASIN == "NONLOCAL" &
+                                                       LOCAL_ADJUCENT == 0, 1,0))%>%
+  mutate(NON_LOCAL_NOT_ADJUCENT_LOCAL_SUBBASIN = ifelse(CHOICE_AREA == "SUBBASIN" & CHOICE_LOCALITY_SUBBASIN == "NONLOCAL" & 
+                                                      LOCAL_ADJUCENT == 0, 1,0 ))
+
+
 
 df_final <- df_final%>%
   mutate(WQ_NON_LOCAL_ADJUCENT_LOCAL_BASIN_CURRENT = ifelse(NON_LOCAL_ADJUCENT_LOCAL_BASIN ==1,CURRENT_AVERAGE,0),
@@ -972,10 +978,10 @@ df_final <- df_final%>%
          WQ_NON_LOCAL_ADJUCENT_LOCAL_BASIN_POLICY = ifelse(NON_LOCAL_ADJUCENT_LOCAL_BASIN ==1,POLICY_AVERAGE,0),
          WQ_NON_LOCAL_ADJUCENT_LOCAL_SUBBASIN_POLCIY = ifelse(NON_LOCAL_ADJUCENT_LOCAL_SUBBASIN ==1,wq_sub_basin_policy,0),
          
-         WQ_NON_LOCAL_NOT_ADJUCENT_LOCAL_BASIN_CURRENT = ifelse(NON_LOCAL_ADJUCENT_LOCAL_BASIN ==0,CURRENT_AVERAGE,0),
-         WQ_NON_LOCAL_NOT_ADJUCENT_LOCAL_SUBBASIN_CURRENT = ifelse(NON_LOCAL_ADJUCENT_LOCAL_SUBBASIN ==0,wq_sub_basin_current,0),
-         WQ_NON_LOCAL_NOT_ADJUCENT_LOCAL_BASIN_POLICY = ifelse(NON_LOCAL_ADJUCENT_LOCAL_BASIN ==0,POLICY_AVERAGE,0),
-         WQ_NON_LOCAL_NOT_ADJUCENT_LOCAL_SUBBASIN_POLCIY = ifelse(NON_LOCAL_ADJUCENT_LOCAL_SUBBASIN ==0,wq_sub_basin_policy,0),
+         WQ_NON_LOCAL_NOT_ADJUCENT_LOCAL_BASIN_CURRENT = ifelse(NON_LOCAL_NOT_ADJUCENT_LOCAL_BASIN ==1,CURRENT_AVERAGE,0),
+         WQ_NON_LOCAL_NOT_ADJUCENT_LOCAL_SUBBASIN_CURRENT = ifelse(NON_LOCAL_NOT_ADJUCENT_LOCAL_SUBBASIN ==1,wq_sub_basin_current,0),
+         WQ_NON_LOCAL_NOT_ADJUCENT_LOCAL_BASIN_POLICY = ifelse(NON_LOCAL_NOT_ADJUCENT_LOCAL_BASIN ==1,POLICY_AVERAGE,0),
+         WQ_NON_LOCAL_NOT_ADJUCENT_LOCAL_SUBBASIN_POLCIY = ifelse(NON_LOCAL_NOT_ADJUCENT_LOCAL_SUBBASIN ==1,wq_sub_basin_policy,0),
          
          
          )
@@ -1401,6 +1407,9 @@ df_final <- df_final%>%
   mutate(WQ_CHANGE = ifelse(CHOICE_AREA == "BASIN", CURRENT_AVERAGE - POLICY_AVERAGE, NA)) %>%
   mutate(WQ_CHANGE = ifelse(CHOICE_AREA == "SUBBASIN", wq_sub_basin_current - wq_sub_basin_policy, WQ_CHANGE))%>%
   
+  mutate(WQ_CHANGE_BASIN = ifelse(CHOICE_AREA == "BASIN", CURRENT_AVERAGE - POLICY_AVERAGE, 0)) %>%
+  mutate(WQ_CHANGE_SUBBASIN = ifelse(CHOICE_AREA == "SUBBASIN", wq_sub_basin_current - wq_sub_basin_policy, 0))%>%
+  
   mutate(BASELINE_X_WQCHANGE_LOCAL_BASIN = ifelse(CHOICE_AREA == "BASIN" & CHOICE_LOCALITY_BASIN == "LOCAL",WQ_CHANGE*CURRENT_AVERAGE,0))%>%
   mutate(BASELINE_X_WQCHANGE_NL_BASIN = ifelse(CHOICE_AREA == "BASIN" & CHOICE_LOCALITY_BASIN == "NONLOCAL",WQ_CHANGE*CURRENT_AVERAGE,0))%>%
   
@@ -1427,7 +1436,7 @@ df_final <- df_final%>%
 
 # WQ at different version - here we. measure how much unit at different versions are vary depend on worst condition
 # For instance in Qu'Appelle V1=3, V2=4, V3=2, V4=3 so the new variable coded as for folks who get V1 as 1
-# V2 as 0 (where is the wors water quality within Qu'Appelle), V3 as 2 V4 as 1
+# v2 as 2 and v3 = 0 (where the best WQ) v4 = 1 (worst will get higer number)
 # in this we we can always compre those version based on the worse WQ
 
 
@@ -1543,7 +1552,7 @@ df_final <- df_final%>%
          BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "BASIN" & VERSION_3 == 1 & CHOICE_BASIN == 4 , 0, BASELINE_WQ_VARIATION),
          BASELINE_WQ_VARIATION = ifelse(CHOICE_AREA == "BASIN" & VERSION_4 == 1 & CHOICE_BASIN == 4 , 0, BASELINE_WQ_VARIATION),
          
-         )
+  )
          
 
 df_final <- df_final%>%
@@ -1603,12 +1612,22 @@ df_final <- df_final %>%
     WQ_POLICY_BASIN = ifelse(CHOICE_AREA == "BASIN", POLICY_AVERAGE, 0),
     WQ_POLICT_SUBBASIN = ifelse(CHOICE_AREA == "SUBBASIN", wq_sub_basin_policy, 0)
   )
+
+
+df_final <- df_final %>%
+  mutate(
+    WQ_POLICY = case_when(
+      CHOICE_AREA == "BASIN" ~ POLICY_AVERAGE,
+      CHOICE_AREA == "SUBBASIN" ~ wq_sub_basin_policy,
+      TRUE ~ 0
+    )
+  )
 ###############################################################################
 # Adding respondents weight
 
-weight <- read_csv("Deriveddata/Respondents_weight.csv")%>%
+weight <- read_csv("DerivedData/final_weights.csv")%>%
   mutate(CaseId = as.character(CaseId))%>%
-  rename(WEIGHT = weight)
+  rename(WEIGHT = final_weight)
 
 df_final <- df_final%>%
   left_join(weight)
@@ -1622,7 +1641,9 @@ df_final <- df_final%>%
 df_final <- df_final[, c( "CaseId","WEIGHT","TREATMENT","VERSION","SURVEY_VERSION_1","SURVEY_VERSION_2", "VERSION_1", "VERSION_2", "VERSION_3", "VERSION_4", # Add CONDITION later
                           "BLK_NUMBER","CHOICE_NUMBER","BASIN","SUB_BASIN","NON_LOCAL",
                           "IMAGECURRENT","IMAGEPOLICY","CURRENT_AVERAGE","POLICY_AVERAGE",
-                          "WQ_CHANGE", "BASELINE_X_WQCHANGE",
+                          "WQ_CHANGE", "WQ_CHANGE_BASIN", "WQ_CHANGE_SUBBASIN",
+                          
+                          "BASELINE_X_WQCHANGE",
                           
                           "BASELINE_X_WQCHANGE_LOCAL_BASIN","BASELINE_X_WQCHANGE_NL_BASIN",
                           "BASELINE_X_WQCHANGE_LOCAL_SUBBASIN","BASELINE_X_WQCHANGE_NL_SUBBASIN",
@@ -1684,6 +1705,8 @@ df_final <- df_final[, c( "CaseId","WEIGHT","TREATMENT","VERSION","SURVEY_VERSIO
                           "WQ_SUBBASIN_NL_POLICY_SUBONLY_X_BASELINE_WQ_3UNIT", 
                           
                           "WQ_POLICY_BASIN","WQ_POLICT_SUBBASIN",
+                          
+                          "WQ_POLICY",
                           
                           "POLICY_SIZE_KM",
                           

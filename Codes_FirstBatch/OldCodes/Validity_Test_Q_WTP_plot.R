@@ -152,8 +152,8 @@ p <- ggplot(df, aes(x = WQ.change.scenario, y = Estimate, color = Validity_Q)) +
     guide = guide_legend(nrow = 2)
   ) +
   scale_y_continuous(
-    limits = c(50, 300),
-    breaks = seq(50, 300, by = 50)
+    limits = c(50, 250),
+    breaks = seq(50, 250, by = 50)
   )
 
 # Save to PNG

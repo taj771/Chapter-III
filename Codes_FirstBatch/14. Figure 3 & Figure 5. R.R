@@ -1,5 +1,5 @@
 ########################################################################################
-# Description: RPM Model 1
+# Description: Marginla WTP table
 #######################################################################################
 
 
@@ -17,11 +17,12 @@ apollo_initialise()
 
 ### Set core controls
 apollo_control = list(
-  modelName       = "Model 1",
+  modelName       = "Model 2",
   modelDescr      = "Mixed-MNL",
   indivID         = "CaseId",  
   nCores          = 8,
-  outputDirectory = "output"
+  outputDirectory = "output",
+  weights = "WEIGHT"
 )
 
 # ################################################################# #
@@ -79,13 +80,13 @@ apollo_fixed = c()
 
 ### Set parameters for generating draws
 apollo_draws = list(
-  interDrawsType = "halton",
+  interDrawsType = "sobol",
   interNDraws    = 1000,
   interUnifDraws = c(),
   interNormDraws = c("draws_asc",
                      "draws_wq_local_basin","draws_wq_nonlocal_basin",
                      "draws_wq_local_sub_basin","draws_wq_nonlocal_sub_basin"),
-  intraDrawsType = "halton",
+  intraDrawsType = "sobol",
   intraNDraws    = 0,
   intraUnifDraws = c(),
   intraNormDraws = c()
@@ -155,6 +156,10 @@ apollo_probabilities = function(apollo_beta, apollo_inputs, functionality = "est
   ### Average across inter-individual draws
   P = apollo_avgInterDraws(P, apollo_inputs, functionality)
   
+  ### Apply weights here (note the functionality argument)
+  P = apollo_weighting(P, apollo_inputs, functionality)
+  
+  
   ### Prepare and return outputs of function
   P = apollo_prepareProb(P, apollo_inputs, functionality)
   return(P)
@@ -168,8 +173,6 @@ model = apollo_estimate(apollo_beta, apollo_fixed,apollo_probabilities, apollo_i
 
 
 
-# Display model outputs
-apollo_modelOutput(model)
 
 # Extract coefficients and covariance matrix
 coef_values <- model$estimate
@@ -444,6 +447,7 @@ n_colors <- length(unique(df_map$HEALTH_SCORE))
 
 # Generate a vector of n unique colors
 library(viridis)
+library(tmap)
 my_colors <- colorRampPalette(c("lightblue", "darkgreen", "yellow", "orange", "red"))
 custom_palette <- my_colors(n_colors)
 
@@ -497,61 +501,57 @@ tmap_save(value_map, "Figures/current_wq_level.png", width = 10, height = 8, uni
 
 
 
-
-
-
+cities <- cities%>%
+  filter(city != "North Battleford")%>%
+  filter(city != "Drumheller")%>%
+  filter(city != "Moose Jaw")%>%
+  filter(city != "Fort Qu'Apelle")
 
 # Get the number of unique values in WTP_2
 n_colors <- length(unique(df_map$WTP_2))
 
-# Generate a vector of n unique colors
-library(viridis)
-custom_palette <- viridis(n_colors, option = "I")
+library(RColorBrewer)
+
+# Sequential palettes (good for ordered data)
+display.brewer.all(type = "seq")
+#custom_palette <- brewer.pal(9, "YlOrRd")  # Yellow to red
+custom_palette <- brewer.pal(n_colors, "Blues")   # Light to dark blue
 
 
-
-value_map <- tm_shape(df_map, crs = 3347)+
-  tm_fill(    col = "WTP_2",
-              palette = custom_palette,
-              style = "cont",
-              title = "Willingness to Pay ($)"
+value_map <- tm_shape(df_map, crs = 3347) +
+  tm_fill(
+    col = "WTP_2",
+    palette = custom_palette,
+    style = "cont",  # This indicates continuous data
+    title = "Willingness to Pay ($)",
+    legend.reverse = TRUE
   ) +
   tm_borders() +
-  #tm_text("name_code", size = 0.8, col = "black", remove.overlap = TRUE)+  # Adjust size,
   tm_shape(ab, crs = 3347) +
-  tm_borders(col = "black", lwd = 2)+
+  tm_borders(col = "black", lwd = 2) +
   tm_shape(mb, crs = 3347) +
-  tm_borders(col = "black", lwd = 2)+
+  tm_borders(col = "black", lwd = 2) +
   tm_shape(sk, crs = 3347) +
-  tm_borders(col = "black", lwd = 2)+ 
-  #tm_shape(ab_cities) +
-  #tm_borders(col = "black", lwd = 2)+
-  #tm_text("name", size = 0.6, col = "black", remove.overlap = TRUE)+  # Adjust size,
-  #tm_shape(mb_cities) +
-  #tm_borders(col = "black", lwd = 2)+
-  #tm_text("name", size = 0.6, col = "black", remove.overlap = TRUE)+  # Adjust size,
-  #tm_shape(sk_cities) +
-  #tm_borders(col = "black", lwd = 2)+ 
-  #tm_text("name", size = 0.6, col = "black", remove.overlap = TRUE)+  # Adjust size,
-  tm_layout(frame = FALSE)+
+  tm_borders(col = "black", lwd = 2) +
+  tm_layout(frame = FALSE) +
   tm_scale_bar(
-    breaks = c(0, 100, 200,300,400),       # custom distance labels
-    text.size = 0.5,               # smaller text
-    position = c(0.6, 0.008),       # custom position
-    color.dark = "black",          # tick and text color
-    color.light = "white"          # fill for alternating blocks
+    breaks = c(0, 100, 200, 300, 400),
+    text.size = 0.5,
+    position = c(0.6, 0.008),
+    color.dark = "black",
+    color.light = "white"
   ) +
   tm_compass(
-    type = "arrow",              # options: "arrow", "8star", "radar"
-    size = 2,                    # size of the compass
-    position = c(0.9, 0.9)       # custom position (x, y: 0 to 1 scale)
-  )+
-  
+    type = "arrow",
+    size = 2,
+    position = c(0.9, 0.9)
+  ) +
   tm_shape(cities) +
   tm_symbols(col = "blue", size = 0.1) +
-  tm_text("city", size = 0.7, col = "black",ymod = -0.5)+
-  
-  tm_legend(frame = F)
+  tm_text("city", size = 0.7, col = "black", ymod = -0.5) +
+  tm_legend(frame = FALSE)
+
+value_map
 
 # Save to PNG
 tmap_save(value_map, "Figures/value_map.png", width = 10, height = 8, units = "in", dpi = 300)

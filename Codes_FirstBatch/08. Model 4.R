@@ -1,5 +1,5 @@
 ########################################################################################
-# Description: RPM Model 9
+# Description: RPM Model 4
 #######################################################################################
 
 
@@ -17,11 +17,12 @@ apollo_initialise()
 
 ### Set core controls
 apollo_control = list(
-  modelName       = "Model 9",
+  modelName       = "Model 4",
   modelDescr      = "Mixed-MNL",
   indivID         = "CaseId",  
   nCores          = 8,
-  outputDirectory = "output"
+  outputDirectory = "output",
+  weights = "WEIGHT"
 )
 
 # ################################################################# #
@@ -29,6 +30,7 @@ apollo_control = list(
 # ################################################################# #
 
 database <- read_csv("./Deriveddata/processed_finaldata_batch_1_Apollo.csv")
+
 
 # Arrange data by RespondentID
 database <- database %>%
@@ -47,7 +49,15 @@ database <- database %>%
   filter(!is.na(WQ_BASIN_NL_CURRENT))%>%
   
   filter(!is.na(WQ_BASIN_LOCAL_POLICY))%>%
-  filter(!is.na(WQ_BASIN_NL_POLICY))
+  filter(!is.na(WQ_BASIN_NL_POLICY))%>%
+  
+  filter(!is.na(AREA_INSTATE_LOCAL_BASIN))%>%
+  filter(!is.na(AREA_INSTATE_NL_BASIN))%>%
+  
+  filter(!is.na(AREA_INSTATE_LOCAL_SUBBASIN))%>%
+  filter(!is.na(AREA_INSTATE_NL_SUBBASIN))
+  
+
 
 # ################################################################# #
 #### DEFINE MODEL PARAMETERS                                     ####
@@ -56,28 +66,24 @@ database <- database %>%
 apollo_beta = c(
   mu_b_asc     = 0,  
   sigma_b_asc = 0.01,
-  b_cost  = 0,   
+  
+  b_cost  = 0,  
+  
   mu_b_wq_local_basin = 0,
-  sigma_b_wq_local_basin = 0.1,
+  sigma_b_wq_local_basin = 0.01,
+  
   mu_b_wq_nonlocal_basin = 0,
-  sigma_b_wq_nonlocal_basin = 0.1,
+  sigma_b_wq_nonlocal_basin = 0.01,
+  
   mu_b_wq_local_sub_basin = 0,
-  sigma_b_wq_local_sub_basin = 0.1,
+  sigma_b_wq_local_sub_basin = 0.01,
+  
   mu_b_wq_nonlocal_sub_basin = 0,
-  sigma_b_wq_nonlocal_sub_basin = 0.1,
+  sigma_b_wq_nonlocal_sub_basin = 0.01,
   
-  b_baseline = 0,
-  b_baseline_sq = 0,
-  
-  #b_cost_x_bl = 0,
-  b_wq_basin_x_bl = 0,
-  b_wq_sub_x_bl = 0
-  
-  
-  
-  
-  
+  b_asc_home_prov_share = 0
 )
+
 
 ### Vector with names (in quotes) of parameters to be kept fixed at their starting value in apollo_beta, use apollo_beta_fixed = c() if none
 apollo_fixed = c()
@@ -89,13 +95,14 @@ apollo_fixed = c()
 
 ### Set parameters for generating draws
 apollo_draws = list(
-  interDrawsType = "halton",
+  interDrawsType = "sobol",
   interNDraws    = 1000,
   interUnifDraws = c(),
   interNormDraws = c("draws_asc",
                      "draws_wq_local_basin","draws_wq_nonlocal_basin",
-                     "draws_wq_local_sub_basin","draws_wq_nonlocal_sub_basin"),
-  intraDrawsType = "halton",
+                     "draws_wq_local_sub_basin","draws_wq_nonlocal_sub_basin"
+                     ),
+  intraDrawsType = "sobol",
   intraNDraws    = 0,
   intraUnifDraws = c(),
   intraNormDraws = c()
@@ -105,6 +112,7 @@ apollo_draws = list(
 ### Create random parameters
 apollo_randCoeff = function(apollo_beta, apollo_inputs){
   randcoeff = list()
+  
   randcoeff[["b_asc"]] = mu_b_asc + sigma_b_asc*draws_asc 
   
   randcoeff[["b_wq_local_basin"]] =  mu_b_wq_local_basin + sigma_b_wq_local_basin*draws_wq_local_basin
@@ -113,6 +121,9 @@ apollo_randCoeff = function(apollo_beta, apollo_inputs){
   randcoeff[["b_wq_local_sub_basin"]] =  mu_b_wq_local_sub_basin + sigma_b_wq_local_sub_basin*draws_wq_local_sub_basin
   randcoeff[["b_wq_nonlocal_sub_basin"]] =  mu_b_wq_nonlocal_sub_basin + sigma_b_wq_nonlocal_sub_basin*draws_wq_nonlocal_sub_basin
   
+  
+  
+
   return(randcoeff)
 }
 
@@ -134,30 +145,21 @@ apollo_probabilities = function(apollo_beta, apollo_inputs, functionality = "est
   
   # Define utilities
   V = list()
-  V[["policy"]] = b_asc + 
-    b_cost * COST + 
-    
-    # WQ improvements (unchanged)
-    b_wq_local_basin * WQ_BASIN_LOCAL_POLICY +
-    b_wq_nonlocal_basin * WQ_BASIN_NL_POLICY +
-    b_wq_local_sub_basin * WQ_SUBBASIN_LOCAL_POLICY_SUBONLY +
-    b_wq_nonlocal_sub_basin * WQ_SUBBASIN_NL_POLICY_SUBONLY +
-    
-    # Continuous baseline effects
-    b_baseline * BASELINE_WQ_VARIATION +  # Linear effect
-    b_baseline_sq * BASELINE_WQ_VARIATION^2 +  # Optional curvature
-    
-    # Continuous interactions
-    #b_cost_x_bl * COST * BASELINE_WQ_VARIATION +
-    b_wq_basin_x_bl * WQ_POLICY_BASIN * BASELINE_WQ_VARIATION * (CHOICE_AREA == "BASIN") +
-    b_wq_sub_x_bl * WQ_POLICT_SUBBASIN * BASELINE_WQ_VARIATION * (CHOICE_AREA == "SUBBASIN")
-  
-  
+  V[["policy"]]  = b_asc + 
+    b_cost *COST + 
+    b_wq_local_basin*WQ_BASIN_LOCAL_POLICY +
+    b_wq_nonlocal_basin*WQ_BASIN_NL_POLICY +
+    b_wq_local_sub_basin*WQ_SUBBASIN_LOCAL_POLICY_SUBONLY +
+    b_wq_nonlocal_sub_basin*WQ_SUBBASIN_NL_POLICY_SUBONLY +
+    b_asc_home_prov_share*HOME_PROV_SHARE
+
+
   V[["opt_out"]] = 
-    b_wq_local_basin * WQ_BASIN_LOCAL_CURRENT +
-    b_wq_nonlocal_basin * WQ_BASIN_NL_CURRENT +
-    b_wq_local_sub_basin * WQ_SUBBASIN_LOCAL_CURRENT_SUBONLY +
-    b_wq_nonlocal_sub_basin * WQ_SUBBASIN_NL_CURRENT_SUBONLY
+    b_wq_local_basin*WQ_BASIN_LOCAL_CURRENT +
+    b_wq_nonlocal_basin*WQ_BASIN_NL_CURRENT +
+    b_wq_local_sub_basin*WQ_SUBBASIN_LOCAL_CURRENT_SUBONLY+
+    b_wq_nonlocal_sub_basin*WQ_SUBBASIN_NL_CURRENT_SUBONLY
+  
   
   # Define MNL settings
   mnl_settings = list(
@@ -175,6 +177,9 @@ apollo_probabilities = function(apollo_beta, apollo_inputs, functionality = "est
   
   ### Average across inter-individual draws
   P = apollo_avgInterDraws(P, apollo_inputs, functionality)
+  
+  ### Apply weights here (note the functionality argument)
+  P = apollo_weighting(P, apollo_inputs, functionality)
   
   ### Prepare and return outputs of function
   P = apollo_prepareProb(P, apollo_inputs, functionality)

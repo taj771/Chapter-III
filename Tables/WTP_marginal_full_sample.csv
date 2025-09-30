@@ -1,5 +1,5 @@
-"","WQ change scenario","Estimate","SE","2.5 %","97.5 %","Validity_Q"
-"1","Local Basin",185,22,141,229,"full sample"
-"2","Non-Local Basin",136,16,105,166,"full sample"
-"3","Local Sub Basin",126,16,94,157,"full sample"
-"4","Non-Local  Sub Basin",84,10,65,104,"full sample"
+"","WQ change scenario","Estimate","SE","2.5 %","97.5 %","Validity_Q","N"
+"1","Local Basin",141,36,70,211,"full sample",1826
+"2","Non-Local Basin",117,28,62,171,"full sample",1826
+"3","Local Sub Basin",107,27,54,160,"full sample",1826
+"4","Non-Local  Sub Basin",85,18,50,121,"full sample",1826

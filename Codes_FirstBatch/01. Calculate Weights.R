@@ -12,7 +12,7 @@ library(patchwork)
 
 
 # 1. Load and prepare survey data -----------------------------------------------
-df <- read_sav("Rawdata/Water_Quality.sav 2") %>% 
+df <- read_sav("Rawdata/Water_Quality_batch2.sav") %>% 
   select(CaseId, PROVINCE, AGE, GENDER, EDUCATION, INCOME) %>%
   mutate(
     income_group = case_when(
@@ -295,6 +295,8 @@ ggplot(province_check) +
 
 
 
+
+
 # Function to create demographic comparison plot for a specific province and demographic
 create_demo_plot <- function(province, demo_col, demo_name) {
   # Get the target values
@@ -329,7 +331,14 @@ create_demo_plot <- function(province, demo_col, demo_name) {
     mutate(
       source = factor(source, levels = c("Unweighted", "Weighted", "Census")),
       category = factor(!!sym(demo_col), levels = names(target_values))
-    )
+    ) %>%
+    # Filter out "Missing" category
+    filter(!str_detect(tolower(category), "missing"))
+  
+  # Check if there's any data left after filtering
+  if (nrow(demo_data) == 0) {
+    stop("No data remaining after filtering out 'Missing' categories for ", province, " - ", demo_name)
+  }
   
   # Create the plot
   ggplot(demo_data, aes(x = category, y = percentage, color = source, group = source)) +
@@ -343,15 +352,25 @@ create_demo_plot <- function(province, demo_col, demo_name) {
       title = paste0(toupper(province), " - ", demo_name, " Distribution Comparison"),
       x = demo_name,
       y = "Percentage",
-      color = "Data Source"
+      color = ""
     ) +
     theme_minimal() +
     theme(
-      axis.text.x = element_text(angle = 45, hjust = 1),
+      axis.text.x = element_text(angle = 60, hjust = 1, size = 12),
       legend.position = "bottom",
-      plot.title = element_text(hjust = 0.5, face = "bold", size = 10)
+      plot.title = element_text(hjust = 0.5, face = "bold", size = 12),
+      axis.text.y = element_text(size = 12),
+      axis.title.y = element_text(size = 12),
+      axis.title.x = element_text(size = 12),
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      axis.line.y = element_line(size = 0.2, color = "black"),
+      axis.line.x = element_line(size = 0.2, color = "black")
     )
 }
+
+
+
 
 # Create all plots
 plots <- list()
@@ -390,7 +409,58 @@ sk_combined <- (plots$sk_age + plots$sk_gender) / (plots$sk_income + plots$sk_ed
   theme(legend.position = "bottom")
 
 # Save the plots
-#ggsave("ab_demo_comparisons.png", ab_combined, width = 12, height = 8, dpi = 300)
-#ggsave("mb_demo_comparisons.png", mb_combined, width = 12, height = 8, dpi = 300)
-#ggsave("sk_demo_comparisons.png", sk_combined, width = 12, height = 8, dpi = 300)
+ggsave("Figures/ab_demo_comparisons.png", ab_combined, width = 12, height = 8, dpi = 300)
+ggsave("Figures/mb_demo_comparisons.png", mb_combined, width = 12, height = 8, dpi = 300)
+ggsave("Figures/sk_demo_comparisons.png", sk_combined, width = 12, height = 8, dpi = 300)
+
+# Seperate plot 
+
+ab_age <- plots$ab_age
+mb_age <- plots$mb_age
+sk_age <- plots$sk_age
+
+# Save the plots
+ggsave("Figures/ab_age_weight.png", ab_age, width = 7, height = 6, dpi = 300)
+ggsave("Figures/mb_age_weight.png", mb_age, width = 7, height = 6, dpi = 300)
+ggsave("Figures/sk_age_weight.png", sk_age, width = 7, height = 6, dpi = 300)
+
+
+ab_gender <- plots$ab_gender
+mb_gender <- plots$mb_gender
+sk_gender <- plots$sk_gender
+
+# Save the plots
+ggsave("Figures/ab_gender_weight.png", ab_gender, width = 7, height = 6, dpi = 300)
+ggsave("Figures/mb_gender_weight.png", mb_gender, width = 7, height = 6, dpi = 300)
+ggsave("Figures/sk_gender_weight.png", sk_gender, width = 7, height = 6, dpi = 300)
+
+
+ab_income <- plots$ab_income
+mb_income <- plots$mb_income
+sk_income <- plots$sk_income
+
+# Save the plots
+ggsave("Figures/ab_income_weight.png", ab_income, width = 7, height = 6, dpi = 300)
+ggsave("Figures/mb_income_weight.png", mb_income, width = 7, height = 6, dpi = 300)
+ggsave("Figures/sk_income_weight.png", sk_income, width = 7, height = 6, dpi = 300)
+
+
+ab_education <- plots$ab_education
+mb_education <- plots$mb_education
+sk_education <- plots$sk_education
+
+# Save the plots
+ggsave("Figures/ab_education_weight.png", ab_education, width = 7, height = 6, dpi = 300)
+ggsave("Figures/mb_education_weight.png", mb_education, width = 7, height = 6, dpi = 300)
+ggsave("Figures/sk_education_weight.png", sk_education, width = 7, height = 6, dpi = 300)
+
+
+
+
+
+
+
+
+
+
 

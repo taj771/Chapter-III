@@ -17,11 +17,12 @@ apollo_initialise()
 
 ### Set core controls
 apollo_control = list(
-  modelName       = "Model 8",
+  modelName       = "Model 8.1",
   modelDescr      = "Mixed-MNL",
   indivID         = "CaseId",  
   nCores          = 8,
-  outputDirectory = "output"
+  outputDirectory = "output",
+  weights = "WEIGHT"
 )
 
 # ################################################################# #
@@ -70,17 +71,9 @@ apollo_beta = c(
   b_asc_baseline_wq_1_2 =0,
   b_asc_baseline_wq_2_3 =0,
   
-  #b_cost_baseline_0_1 = 0,
-  #b_cost_baseline_1_2 = 0,
-  #b_cost_baseline_2_3 = 0,
-  
-  b_wq_basin_x_bl_0_1 = 0,
-  b_wq_basin_x_bl_1_2 = 0,
-  b_wq_basin_x_bl_2_3 = 0,
-  
-  b_wq_subbasin_x_bl_0_1 = 0,
-  b_wq_subbasin_x_bl_1_2 = 0,
-  b_wq_subbasin_x_bl_2_3 = 0
+  b_wq_policy_x_bl_0_1 = 0,
+  b_wq_policy_x_bl_1_2 = 0,
+  b_wq_policy_x_bl_2_3 = 0
   
 )
 
@@ -94,13 +87,13 @@ apollo_fixed = c()
 
 ### Set parameters for generating draws
 apollo_draws = list(
-  interDrawsType = "halton",
+  interDrawsType = "sobol",
   interNDraws    = 1000,
   interUnifDraws = c(),
   interNormDraws = c("draws_asc",
                      "draws_wq_local_basin","draws_wq_nonlocal_basin",
                      "draws_wq_local_sub_basin","draws_wq_nonlocal_sub_basin"),
-  intraDrawsType = "halton",
+  intraDrawsType = "sobol",
   intraNDraws    = 0,
   intraUnifDraws = c(),
   intraNormDraws = c()
@@ -153,21 +146,12 @@ apollo_probabilities = function(apollo_beta, apollo_inputs, functionality = "est
     b_asc_baseline_wq_1_2 * BASELINE_WQ_1_2UNIT +
     b_asc_baseline_wq_2_3 * BASELINE_WQ_2_3UNIT +
     
-    # Cost × Baseline interactions (existing)
-    #b_cost_baseline_0_1 * COST * BASELINE_WQ_0_1UNIT +
-    #b_cost_baseline_1_2 * COST * BASELINE_WQ_1_2UNIT +
-    #b_cost_baseline_2_3 * COST * BASELINE_WQ_2_3UNIT +
-    
     # NEW: Interactions between WQ improvements and baseline WQ
-    b_wq_basin_x_bl_0_1 * WQ_POLICY_BASIN * BASELINE_WQ_0_1UNIT *(CHOICE_AREA == "BASIN") +
-    b_wq_basin_x_bl_1_2 * WQ_POLICY_BASIN * BASELINE_WQ_1_2UNIT *(CHOICE_AREA == "BASIN") +
-    b_wq_basin_x_bl_2_3 * WQ_POLICY_BASIN * BASELINE_WQ_2_3UNIT *(CHOICE_AREA == "BASIN") +
-    
-    b_wq_subbasin_x_bl_0_1 * WQ_POLICT_SUBBASIN * BASELINE_WQ_0_1UNIT *(CHOICE_AREA == "SUBBASIN") +  
-    b_wq_subbasin_x_bl_1_2 * WQ_POLICT_SUBBASIN * BASELINE_WQ_1_2UNIT *(CHOICE_AREA == "SUBBASIN") +
-    b_wq_subbasin_x_bl_2_3 * WQ_POLICT_SUBBASIN * BASELINE_WQ_2_3UNIT *(CHOICE_AREA == "SUBBASIN")
-    
-
+    b_wq_policy_x_bl_0_1 *WQ_POLICY* BASELINE_WQ_0_1UNIT  +
+    b_wq_policy_x_bl_1_2 *WQ_POLICY* BASELINE_WQ_1_2UNIT  +
+    b_wq_policy_x_bl_2_3 *WQ_POLICY* BASELINE_WQ_2_3UNIT 
+  
+  
   V[["opt_out"]] = 
     b_wq_local_basin * WQ_BASIN_LOCAL_CURRENT +
     b_wq_nonlocal_basin * WQ_BASIN_NL_CURRENT +
@@ -190,6 +174,9 @@ apollo_probabilities = function(apollo_beta, apollo_inputs, functionality = "est
   
   ### Average across inter-individual draws
   P = apollo_avgInterDraws(P, apollo_inputs, functionality)
+  
+  ### Apply weights here (note the functionality argument)
+  P = apollo_weighting(P, apollo_inputs, functionality)
   
   ### Prepare and return outputs of function
   P = apollo_prepareProb(P, apollo_inputs, functionality)

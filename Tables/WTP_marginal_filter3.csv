@@ -1,5 +1,5 @@
-"","WQ change scenario","Estimate","SE","2.5 %","97.5 %","Validity_Q"
-"1","Local Basin",187,23,143,231,"Filter 3"
-"2","Non-Local Basin",135,16,105,166,"Filter 3"
-"3","Local Sub Basin",123,16,92,155,"Filter 3"
-"4","Non-Local  Sub Basin",84,10,64,103,"Filter 3"
+"","WQ change scenario","Estimate","SE","2.5 %","97.5 %","Validity_Q","N"
+"1","Local Basin",175,54,70,280,"Filter 3",1257
+"2","Non-Local Basin",150,35,81,219,"Filter 3",1257
+"3","Local Sub Basin",113,31,53,173,"Filter 3",1257
+"4","Non-Local  Sub Basin",106,23,61,151,"Filter 3",1257

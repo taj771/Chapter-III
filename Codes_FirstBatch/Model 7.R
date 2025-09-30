@@ -1,5 +1,5 @@
 ########################################################################################
-# Description: RPM Model 1
+# Description: RPM Model 9
 #######################################################################################
 
 
@@ -17,7 +17,7 @@ apollo_initialise()
 
 ### Set core controls
 apollo_control = list(
-  modelName       = "Model 1",
+  modelName       = "Model 7",
   modelDescr      = "Mixed-MNL",
   indivID         = "CaseId",  
   nCores          = 8,
@@ -29,8 +29,7 @@ apollo_control = list(
 #### LOAD DATA                                                   ####
 # ################################################################# #
 
-database <- read_csv("./Deriveddata/processed_finaldata_batch_1_Apollo.csv")%>%
-  filter(!is.na(WEIGHT))
+database <- read_csv("./Deriveddata/processed_finaldata_batch_1_Apollo.csv")
 
 # Arrange data by RespondentID
 database <- database %>%
@@ -66,9 +65,11 @@ apollo_beta = c(
   mu_b_wq_local_sub_basin = 0,
   sigma_b_wq_local_sub_basin = 0.1,
   mu_b_wq_nonlocal_sub_basin = 0,
-  sigma_b_wq_nonlocal_sub_basin = 0.1
+  sigma_b_wq_nonlocal_sub_basin = 0.1,
   
-  
+  b_baseline = 0,
+  b_wq_x_bl = 0
+
 )
 
 ### Vector with names (in quotes) of parameters to be kept fixed at their starting value in apollo_beta, use apollo_beta_fixed = c() if none
@@ -126,19 +127,28 @@ apollo_probabilities = function(apollo_beta, apollo_inputs, functionality = "est
   
   # Define utilities
   V = list()
-  V[["policy"]]  = b_asc + b_cost *COST + 
-    b_wq_local_basin*WQ_BASIN_LOCAL_POLICY +
-    b_wq_nonlocal_basin*WQ_BASIN_NL_POLICY +
-    b_wq_local_sub_basin*WQ_SUBBASIN_LOCAL_POLICY_SUBONLY +
-    b_wq_nonlocal_sub_basin*WQ_SUBBASIN_NL_POLICY_SUBONLY
-  
+  V[["policy"]] = b_asc + 
+    b_cost * COST + 
+    
+    # WQ improvements (unchanged)
+    b_wq_local_basin * WQ_BASIN_LOCAL_POLICY +
+    b_wq_nonlocal_basin * WQ_BASIN_NL_POLICY +
+    b_wq_local_sub_basin * WQ_SUBBASIN_LOCAL_POLICY_SUBONLY +
+    b_wq_nonlocal_sub_basin * WQ_SUBBASIN_NL_POLICY_SUBONLY +
+    
+    # Continuous baseline effects
+    b_baseline * BASELINE_WQ_VARIATION +  # Linear effect
+    #b_baseline_sq * BASELINE_WQ_VARIATION^2 +  # Optional curvature
+    
+    b_wq_x_bl*BASELINE_WQ_VARIATION*WQ_CHANGE
+
   
   V[["opt_out"]] = 
-    b_wq_local_basin*WQ_BASIN_LOCAL_CURRENT +
-    b_wq_nonlocal_basin*WQ_BASIN_NL_CURRENT +
-    b_wq_local_sub_basin*WQ_SUBBASIN_LOCAL_CURRENT_SUBONLY+
-    b_wq_nonlocal_sub_basin*WQ_SUBBASIN_NL_CURRENT_SUBONLY
-  
+    b_wq_local_basin * WQ_BASIN_LOCAL_CURRENT +
+    b_wq_nonlocal_basin * WQ_BASIN_NL_CURRENT +
+    b_wq_local_sub_basin * WQ_SUBBASIN_LOCAL_CURRENT_SUBONLY +
+    b_wq_nonlocal_sub_basin * WQ_SUBBASIN_NL_CURRENT_SUBONLY 
+
   
   # Define MNL settings
   mnl_settings = list(

@@ -20,7 +20,7 @@ library(car)
 # 1. Create data frame with coloum names of Original data file that use for making column names
 # consistent
 # Read raw data file from CHAISR
-df <- read_sav("Rawdata/Water_Quality.sav 2")
+df <- read_sav("Rawdata/Water_Quality_batch2.sav")
 
 # variable
 df1 <- df[, grepl("COST", names(df)) | # Original data file the name the column that contain the cost of each policy scenario as "AR_B1_1_COST", 

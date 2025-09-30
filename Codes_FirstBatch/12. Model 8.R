@@ -1,5 +1,5 @@
 ########################################################################################
-# Description: RPM Model 7
+# Description: RPM Model 9
 #######################################################################################
 
 
@@ -17,11 +17,12 @@ apollo_initialise()
 
 ### Set core controls
 apollo_control = list(
-  modelName       = "Model 7",
+  modelName       = "Model 9",
   modelDescr      = "Mixed-MNL",
   indivID         = "CaseId",  
   nCores          = 8,
-  outputDirectory = "output"
+  outputDirectory = "output",
+  weights = "WEIGHT"
 )
 
 # ################################################################# #
@@ -66,13 +67,16 @@ apollo_beta = c(
   mu_b_wq_nonlocal_sub_basin = 0,
   sigma_b_wq_nonlocal_sub_basin = 0.1,
   
-  b_asc_baseline_wq_0_1 = 0,
-  b_asc_baseline_wq_1_2 =0,
-  b_asc_baseline_wq_2_3 =0,
+  b_baseline = 0,
+  b_baseline_sq = 0,
   
-  b_cost_baseline_0_1 = 0,
-  b_cost_baseline_1_2 = 0,
-  b_cost_baseline_2_3 = 0
+  #b_cost_x_bl = 0,
+  b_wq_basin_x_bl = 0,
+  b_wq_sub_x_bl = 0
+  
+  
+  
+  
   
 )
 
@@ -86,13 +90,13 @@ apollo_fixed = c()
 
 ### Set parameters for generating draws
 apollo_draws = list(
-  interDrawsType = "halton",
+  interDrawsType = "sobol",
   interNDraws    = 1000,
   interUnifDraws = c(),
   interNormDraws = c("draws_asc",
                      "draws_wq_local_basin","draws_wq_nonlocal_basin",
                      "draws_wq_local_sub_basin","draws_wq_nonlocal_sub_basin"),
-  intraDrawsType = "halton",
+  intraDrawsType = "sobol",
   intraNDraws    = 0,
   intraUnifDraws = c(),
   intraNormDraws = c()
@@ -131,27 +135,30 @@ apollo_probabilities = function(apollo_beta, apollo_inputs, functionality = "est
   
   # Define utilities
   V = list()
-  V[["policy"]]  = b_asc + b_cost *COST + 
-    b_wq_local_basin*WQ_BASIN_LOCAL_POLICY +
-    b_wq_nonlocal_basin*WQ_BASIN_NL_POLICY +
-    b_wq_local_sub_basin*WQ_SUBBASIN_LOCAL_POLICY_SUBONLY +
-    b_wq_nonlocal_sub_basin*WQ_SUBBASIN_NL_POLICY_SUBONLY +
-    b_asc_baseline_wq_0_1*BASELINE_WQ_0_1UNIT+
-    b_asc_baseline_wq_1_2*BASELINE_WQ_1_2UNIT+
-    b_asc_baseline_wq_2_3*BASELINE_WQ_2_3UNIT+
-    b_cost_baseline_0_1 * COST * BASELINE_WQ_0_1UNIT +  # Interaction for 1-unit better baseline
-    b_cost_baseline_1_2 * COST * BASELINE_WQ_1_2UNIT +  # Interaction for 2-unit better baseline
-    b_cost_baseline_2_3 * COST * BASELINE_WQ_2_3UNIT  # Interaction for 3-unit better baseline
-  
-  
+  V[["policy"]] = b_asc + 
+    b_cost * COST + 
+    
+    # WQ improvements (unchanged)
+    b_wq_local_basin * WQ_BASIN_LOCAL_POLICY +
+    b_wq_nonlocal_basin * WQ_BASIN_NL_POLICY +
+    b_wq_local_sub_basin * WQ_SUBBASIN_LOCAL_POLICY_SUBONLY +
+    b_wq_nonlocal_sub_basin * WQ_SUBBASIN_NL_POLICY_SUBONLY +
+    
+    # Continuous baseline effects
+    b_baseline * BASELINE_WQ_VARIATION +  # Linear effect
+    b_baseline_sq * BASELINE_WQ_VARIATION^2 +  # Optional curvature
+    
+    # Continuous interactions
+    #b_cost_x_bl * COST * BASELINE_WQ_VARIATION +
+    b_wq_basin_x_bl * WQ_POLICY_BASIN * BASELINE_WQ_VARIATION * (CHOICE_AREA == "BASIN") +
+    b_wq_sub_x_bl * WQ_POLICT_SUBBASIN * BASELINE_WQ_VARIATION * (CHOICE_AREA == "SUBBASIN")
   
   
   V[["opt_out"]] = 
-    b_wq_local_basin*WQ_BASIN_LOCAL_CURRENT +
-    b_wq_nonlocal_basin*WQ_BASIN_NL_CURRENT +
-    b_wq_local_sub_basin*WQ_SUBBASIN_LOCAL_CURRENT_SUBONLY+
-    b_wq_nonlocal_sub_basin*WQ_SUBBASIN_NL_CURRENT_SUBONLY
-  
+    b_wq_local_basin * WQ_BASIN_LOCAL_CURRENT +
+    b_wq_nonlocal_basin * WQ_BASIN_NL_CURRENT +
+    b_wq_local_sub_basin * WQ_SUBBASIN_LOCAL_CURRENT_SUBONLY +
+    b_wq_nonlocal_sub_basin * WQ_SUBBASIN_NL_CURRENT_SUBONLY
   
   # Define MNL settings
   mnl_settings = list(
@@ -169,6 +176,9 @@ apollo_probabilities = function(apollo_beta, apollo_inputs, functionality = "est
   
   ### Average across inter-individual draws
   P = apollo_avgInterDraws(P, apollo_inputs, functionality)
+  
+  ### Apply weights here (note the functionality argument)
+  P = apollo_weighting(P, apollo_inputs, functionality)
   
   ### Prepare and return outputs of function
   P = apollo_prepareProb(P, apollo_inputs, functionality)
@@ -188,6 +198,4 @@ apollo_modelOutput(model)
 
 # Save model outputs
 apollo_saveOutput(model)
-
-
 

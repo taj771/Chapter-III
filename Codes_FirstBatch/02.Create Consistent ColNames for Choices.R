@@ -268,16 +268,16 @@ df <- rbind(df,df_temp)
 
 # Addressing the issue with LSN_B43_3_COST - in original data it has name as LSN_B43
 
-df_temp <- data.frame(
-  choice_name = c("LSN_B43"),
-  ChoiceID = c("B43_3"),
-  var_name = c("COST"),
-  vaiable_name = c("B43_3_COST")
-)
+#df_temp <- data.frame(
+#  choice_name = c("LSN_B43"),
+#  ChoiceID = c("B43_3"),
+#  var_name = c("COST"),
+#  vaiable_name = c("B43_3_COST")
+#)
 
-colnames(df_temp) <- colnames(df)
+#colnames(df_temp) <- colnames(df)
 
-df <- rbind(df,df_temp)
+#df <- rbind(df,df_temp)
 
 
 df <- df%>%
