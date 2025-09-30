@@ -1,13 +1,8 @@
 ########################################################################################
 # Figure 7: Marginal WTP across varying baseline water quality conditions
 #######################################################################################
-
-
 ### Clear memory
 rm(list = ls())
-
-### Load Apollo library
-library(apollo)
 
 ### Set working directory (only works in RStudio)
 #apollo_setWorkDir()

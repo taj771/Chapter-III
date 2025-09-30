@@ -5,11 +5,6 @@
 ### Clear memory
 rm(list = ls())
 
-library(sf)
-library(tmap)
-library(tidyverse)
-library(tidygeocoder)
-
 df_map <- st_read("/Users/tharakajayalath/Library/CloudStorage/OneDrive-UniversityofSaskatchewan/Chapter III-UseNonUseValue/Survey/Shapefile/study_area_map_with_WQ.shp")
 
 

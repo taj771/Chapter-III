@@ -4,19 +4,6 @@
 # Clean the memory
 rm(list = ls())  # Removes all objects in the environment
 
-library(tidyverse)
-library(haven)
-library(readxl)
-library(tidyr)
-library(stringr)
-library(readr)
-library(haven)
-library(purrr)
-library(apollo)
-library(pacman)
-library(car)
-
-
 # 1. Create data frame with coloum names of Original data file that use for making column names
 # consistent
 # Read raw data file from CHAISR

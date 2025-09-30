@@ -1,17 +1,7 @@
-rm(list=ls(all=TRUE))
+### Clear memory
+rm(list = ls())
 
-# Load required libraries
-library(haven)
-library(dplyr)
-library(cansim)
-library(janitor)
-library(anesrake)
-library(naniar)
-library(tidyverse)
-library(patchwork)
-
-
-# 1. Load and prepare survey data -----------------------------------------------
+# 1. Load and prepare survey data
 df <- read_sav("Rawdata/Water_Quality_batch2.sav") %>% 
   select(CaseId, PROVINCE, AGE, GENDER, EDUCATION, INCOME) %>%
   mutate(

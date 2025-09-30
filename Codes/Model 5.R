@@ -2,12 +2,8 @@
 # Description: Model 5 (RPM)
 #######################################################################################
 
-
 ### Clear memory
 rm(list = ls())
-
-### Load Apollo library
-library(apollo)
 
 ### Set working directory (only works in RStudio)
 #apollo_setWorkDir()

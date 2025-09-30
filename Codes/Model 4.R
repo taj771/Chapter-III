@@ -1,13 +1,9 @@
 ########################################################################################
 # Description: Model 4 (RPM)
 #######################################################################################
-
-
 ### Clear memory
 rm(list = ls())
 
-### Load Apollo library
-library(apollo)
 
 ### Set working directory (only works in RStudio)
 #apollo_setWorkDir()
